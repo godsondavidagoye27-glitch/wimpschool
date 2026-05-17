@@ -26,6 +26,12 @@ body {
   line-height: 1.6;
 }
 
+.hide-until-auth {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 a {
   color: inherit;
   text-decoration: none;

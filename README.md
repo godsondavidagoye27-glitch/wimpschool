@@ -56,7 +56,13 @@ This creates `js/config.js` from `.env`. `js/config.js` is ignored by git to kee
 
 > If `node scripts/generate-config.js` reports missing values, fill in the required keys and retry before starting the app.
 
-4. Start the local site:
+4. Deploy the Supabase Edge Function for super admin secret validation and add `SUPER_ADMIN_SECRET` to your Supabase project environment variables.
+
+```bash
+supabase functions deploy super-admin-login
+```
+
+5. Start the local site:
 
 ```bash
 npm start
