@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Attendance Tracking | WimpSchool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#e63a2e" />
+</head>
+<body data-required-role="teacher" data-page="attendance">
+  <header class="dashboard-header">
+    <div class="brand">WimpSchool</div>
+    <nav class="dashboard-nav">
+      <a href="teacher-dashboard.html">Dashboard</a>
+      <a href="results.html">Results</a>
+      <a href="index.html" data-logout class="btn btn-secondary small">Logout</a>
+    </nav>
+  </header>
+
+  <main class="dashboard-main">
+    <section class="dashboard-hero">
+      <div>
+        <span class="eyebrow">Attendance tracking</span>
+        <h1>Record daily attendance with ease</h1>
+        <p>Mark present, absent, and late students, and review attendance summaries by class.</p>
+      </div>
+      <div class="dashboard-actions">
+        <a href="#mark" class="btn btn-primary">Take attendance</a>
+      </div>
+    </section>
+
+    <section class="cards-row" id="mark">
+      <article class="list-card">
+        <h2>Mark attendance</h2>
+        <p id="attendanceActionText">Select a class and record attendance for today.</p>
+      </article>
+      <article class="list-card">
+        <h2>Attendance report</h2>
+        <ul id="attendanceDetailsList">
+          <li>Loading attendance summary…</li>
+        </ul>
+      </article>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/backend.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

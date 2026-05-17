@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Management | WimpSchool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#e63a2e" />
+</head>
+<body data-required-role="school_admin" data-page="student-management">
+  <header class="dashboard-header">
+    <div class="brand">WimpSchool</div>
+    <nav class="dashboard-nav">
+      <a href="school-admin-dashboard.html">Dashboard</a>
+      <a href="teacher-dashboard.html">Teacher view</a>
+      <a href="parent-portal.html">Parent view</a>
+      <a href="index.html" data-logout class="btn btn-secondary small">Logout</a>
+    </nav>
+  </header>
+
+  <main class="dashboard-main">
+    <section class="dashboard-hero">
+      <div>
+        <span class="eyebrow">Student management</span>
+        <h1>Manage students and bulk imports</h1>
+        <p>Create student profiles, auto-generate IDs, and send parent invites from one panel.</p>
+      </div>
+      <div class="dashboard-actions">
+        <a href="#single" class="btn btn-primary">Add single student</a>
+        <a href="#bulk" class="btn btn-secondary">Bulk upload</a>
+      </div>
+    </section>
+
+    <section id="single" class="cards-row">
+      <article class="list-card">
+        <h2>Add a single student</h2>
+        <form id="studentForm">
+          <label>Student name</label>
+          <input type="text" id="studentName" placeholder="Amina Yusuf" />
+          <label>Class</label>
+          <input type="text" id="studentClass" placeholder="Primary 4A" />
+          <label>Parent name</label>
+          <input type="text" id="studentParentName" placeholder="Mrs. Fatima Yusuf" />
+          <label>Parent email</label>
+          <input type="email" id="studentParentEmail" placeholder="parent@example.com" />
+          <label>Parent phone</label>
+          <input type="tel" id="studentParentPhone" placeholder="+234 800 000 0000" />
+          <button type="submit" class="btn btn-primary">Create student</button>
+        </form>
+        <p id="studentCreateStatus" class="form-note"></p>
+      </article>
+      <article class="list-card" id="bulk">
+        <h2>Bulk CSV / Excel upload</h2>
+        <p>Download the template, fill the rows, and upload to create multiple student profiles at once.</p>
+        <button id="downloadTemplateBtn" class="btn btn-secondary">Download template</button>
+        <label>Upload file</label>
+        <input type="file" id="bulkUploadInput" accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+        <p id="bulkUploadStatus" class="form-note"></p>
+      </article>
+    </section>
+
+    <section class="charts-panel">
+      <div class="info-card" id="studentImportPreview">
+        <h2>Import preview</h2>
+        <p>Rows with missing data will be highlighted before confirmation.</p>
+      </div>
+      <div class="info-card" id="studentListCard">
+        <h2>Student list</h2>
+        <p>Search and filter students by class to view records quickly.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/backend.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

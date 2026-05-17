@@ -1,0 +1,13 @@
+{
+  "name": "wimpschool",
+  "version": "1.0.0",
+  "description": "WimpSchool static web platform scaffold",
+  "private": true,
+  "scripts": {
+    "start": "live-server --port=8000 --entry-file=index.html",
+    "generate-config": "node scripts/generate-config.js"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}

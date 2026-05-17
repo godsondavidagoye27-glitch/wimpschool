@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login | WimpSchool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#e63a2e" />
+</head>
+<body>
+  <header class="auth-header">
+    <div class="brand">WimpSchool</div>
+    <a href="index.html" class="text-link">Back to Home</a>
+  </header>
+
+  <main class="auth-page">
+    <section class="auth-panel">
+      <span class="eyebrow">Unified access</span>
+      <h1>Login to WimpSchool</h1>
+      <p>One login for parents, teachers, and school admins. We’ll redirect you to the right dashboard.</p>
+
+      <form id="loginForm">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="you@example.com" required />
+
+        <label>Password</label>
+        <input type="password" id="password" placeholder="••••••••" required />
+
+        <div class="form-row space-between">
+          <label class="checkbox-label"><input type="checkbox" id="rememberMe" /> Remember me</label>
+          <a href="forgot-password.html" class="text-link">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Login</button>
+      </form>
+
+      <p class="form-note">New school? <a href="register.html">Register your school</a></p>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

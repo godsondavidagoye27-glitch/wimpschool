@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invite | WimpSchool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#e63a2e" />
+</head>
+<body>
+  <header class="auth-header">
+    <div class="brand">WimpSchool</div>
+    <a href="login.html" class="text-link">Back to Login</a>
+  </header>
+
+  <main class="auth-page">
+    <section class="auth-panel">
+      <span class="eyebrow">Account invitation</span>
+      <h1 id="inviteTitle">Welcome to WimpSchool</h1>
+      <p id="inviteIntro">You have been invited to join your school community. Create a secure password to continue.</p>
+
+      <div class="invite-summary card">
+        <p><strong id="inviteRole">Role:</strong> Parent / Teacher</p>
+        <p><strong id="inviteSchool">School:</strong> Example School</p>
+        <p><strong id="inviteStudent">Student:</strong> Daniel Obi</p>
+      </div>
+
+      <form id="inviteForm">
+        <label>New Password</label>
+        <input type="password" id="invitePassword" placeholder="Create a password" required />
+
+        <label>Confirm Password</label>
+        <input type="password" id="inviteConfirmPassword" placeholder="Confirm password" required />
+
+        <button type="submit" class="btn btn-primary">Activate Account</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/invite.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

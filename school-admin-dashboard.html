@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>School Admin Dashboard | WimpSchool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#e63a2e" />
+</head>
+<body data-required-role="school_admin">
+  <header class="dashboard-header">
+    <div class="brand">WimpSchool</div>
+    <nav class="dashboard-nav">
+      <a href="student-management.html">Students</a>
+      <a href="teacher-dashboard.html">Teachers</a>
+      <a href="parent-portal.html">Parents</a>
+      <a href="index.html" data-logout class="btn btn-secondary small">Logout</a>
+    </nav>
+  </header>
+
+  <main class="dashboard-main">
+    <section class="dashboard-hero">
+      <div>
+        <span class="eyebrow">School admin</span>
+        <h1>Welcome back, School Administrator</h1>
+        <p>Overview of students, teachers, fees and activity at your school.</p>
+      </div>
+      <div class="dashboard-actions">
+        <a href="student-management.html" class="btn btn-primary">Add student</a>
+        <a href="#attendance" class="btn btn-secondary">Record attendance</a>
+      </div>
+    </section>
+
+    <section class="stat-grid">
+      <article class="stat-card">
+        <h3>Total students</h3>
+        <p id="totalStudents">—</p>
+      </article>
+      <article class="stat-card">
+        <h3>Total teachers</h3>
+        <p id="totalTeachers">—</p>
+      </article>
+      <article class="stat-card">
+        <h3>Fees collected today</h3>
+        <p id="feesCollected">—</p>
+      </article>
+      <article class="stat-card">
+        <h3>Outstanding fees</h3>
+        <p id="outstandingFees">—</p>
+      </article>
+    </section>
+
+    <section class="charts-panel">
+      <div class="chart-card">
+        <div class="section-heading">
+          <h2>Fees collection</h2>
+          <p>Daily revenue and outstanding balances</p>
+        </div>
+        <canvas id="feeChart" height="240"></canvas>
+      </div>
+
+      <div class="info-card">
+        <h3>Recent payments</h3>
+        <ul>
+          <li>Adesuwa - ₦45,000 - Paid</li>
+          <li>Chinedu - ₦32,000 - Partial</li>
+          <li>Sara - ₦50,000 - Paid</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="attendance" class="announcements-panel">
+      <div class="section-heading">
+        <h2>Quick actions</h2>
+      </div>
+      <div class="quick-grid">
+        <article class="quick-card"><h4>Add single student</h4></article>
+        <article class="quick-card"><h4>Bulk import</h4></article>
+        <article class="quick-card"><h4>Generate result</h4></article>
+        <article class="quick-card"><h4>Send warning</h4></article>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
