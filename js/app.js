@@ -5,11 +5,24 @@ const SESSION_TIMEOUT_MINUTES = 30;
 window.addEventListener('load', async () => {
   registerServiceWorker();
   listenInstallPrompt();
-  await enforcePageRole();
+  const allowed = await enforcePageRole();
+  if (!allowed) {
+    return;
+  }
   await loadPageData();
   await loadPageScripts();
   attachLogoutHandlers();
 });
+
+function hideProtectedContent() {
+  if (document.body.dataset.requiredRole) {
+    document.body.classList.add('hide-until-auth');
+  }
+}
+
+function showProtectedContent() {
+  document.body.classList.remove('hide-until-auth');
+}
 
 function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
@@ -521,18 +534,36 @@ async function registerSchool(payload) {
   window.location.href = 'login.html';
 }
 
+async function verifySuperAdminSecret(secret) {
+  if (!secret) {
+    return { error: { message: 'Super admin secret key is required.' } };
+  }
+
+  const response = await supabase.functions.invoke('super-admin-login', {
+    body: JSON.stringify({ secret }),
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (response.error) {
+    return { error: response.error };
+  }
+
+  return { data: response.data };
+}
+
 async function superAdminLogin(email, password, secret) {
-  if (secret !== wimpSchoolConfig.superAdminSecret) {
-    return showMessage('Invalid super admin secret key.');
+  const verifyResult = await verifySuperAdminSecret(secret);
+  if (verifyResult.error) {
+    return showMessage(verifyResult.error.message || 'Invalid super admin secret key.', 'error');
   }
 
   const { data, error } = await signIn(email, password);
   if (error) {
-    return showMessage(error.message || 'Login failed.');
+    return showMessage(error.message || 'Login failed.', 'error');
   }
 
   if (data.role !== 'super_admin') {
-    return showMessage('This account does not have super admin access.');
+    return showMessage('This account does not have super admin access.', 'error');
   }
 
   saveSession({
@@ -558,39 +589,42 @@ async function requestPasswordReset(email) {
 async function enforcePageRole() {
   const requiredRole = document.body.dataset.requiredRole;
   if (!requiredRole) {
-    return;
+    showProtectedContent();
+    return true;
   }
 
-  const session = loadSession();
-  let currentRole = session?.role;
+  hideProtectedContent();
 
-  if (!currentRole) {
-    const { data, error } = await supabase.auth.getSession();
-    if (error || !data?.session?.user) {
-      window.location.href = 'login.html';
-      return;
-    }
-
-    const userId = data.session.user.id;
-    const roleResult = await fetchUserRole(userId);
-    if (roleResult.error || !roleResult.data) {
-      window.location.href = 'login.html';
-      return;
-    }
-
-    currentRole = roleResult.data.role || data.session.user.user_metadata?.role;
-    saveSession({
-      userId,
-      email: data.session.user.email,
-      role: currentRole,
-      schoolId: roleResult.data.school_id
-    });
+  const sessionInfo = await supabase.auth.getSession();
+  if (!sessionInfo?.data?.session?.user) {
+    window.location.href = 'login.html';
+    return false;
   }
 
+  const userId = sessionInfo.data.session.user.id;
+  const roleResult = await fetchUserRole(userId);
+  if (roleResult.error || !roleResult.data) {
+    window.location.href = 'login.html';
+    return false;
+  }
+
+  const currentRole = roleResult.data.role || sessionInfo.data.session.user.user_metadata?.role;
   if (currentRole !== requiredRole) {
     showMessage('Access denied. Please sign in with the correct account.', 'error');
     window.location.href = 'login.html';
+    return false;
   }
+
+  saveSession({
+    userId,
+    email: sessionInfo.data.session.user.email,
+    role: currentRole,
+    schoolId: roleResult.data.school_id,
+    remember: true
+  });
+
+  showProtectedContent();
+  return true;
 }
 
 if (document.getElementById('loginForm')) {

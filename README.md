@@ -45,14 +45,17 @@ npm install
 ```
 
 2. Copy `.env.example` to `.env` and fill in your Supabase and Flutterwave values.
-3. Generate the browser config file from `.env` before running the static site:
+3. Generate the browser config file from `.env` before running the static site. This is a hard requirement; the generator now fails if required values are missing.
 
 ```bash
 # from repository root
 node scripts/generate-config.js
 ```
 
-This will create `js/config.js` from the `.env` values. `js/config.js` is ignored by git to keep secrets out of source control.
+This creates `js/config.js` from `.env`. `js/config.js` is ignored by git to keep secrets out of source control.
+
+> If `node scripts/generate-config.js` reports missing values, fill in the required keys and retry before starting the app.
+
 4. Start the local site:
 
 ```bash
