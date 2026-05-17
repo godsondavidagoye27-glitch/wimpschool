@@ -40,10 +40,17 @@ function listenInstallPrompt() {
   });
 }
 
-function showMessage(message) {
+function showMessage(message, type = 'info') {
   if (!message) return;
-  alert(message);
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
 }
+
+window.showMessage = window.showMessage || showMessage;
 
 function getRoleRedirect(role) {
   switch (role) {
@@ -268,6 +275,7 @@ async function loadParentPortal() {
   document.getElementById('childName')?.textContent = student?.name || parentData?.name || 'Not available';
   document.getElementById('studentId')?.textContent = student?.student_code || student?.id || 'N/A';
   document.getElementById('balanceAmount')?.textContent = formatCurrency(outstanding);
+  document.getElementById('paymentBalance')?.textContent = formatCurrency(outstanding);
   document.getElementById('attendancePercent')?.textContent = formatPercent(attendancePercent);
 
   const noticesContainer = document.getElementById('parentNotices');
@@ -580,7 +588,7 @@ async function enforcePageRole() {
   }
 
   if (currentRole !== requiredRole) {
-    alert('Access denied. Please sign in with the correct account.');
+    showMessage('Access denied. Please sign in with the correct account.', 'error');
     window.location.href = 'login.html';
   }
 }

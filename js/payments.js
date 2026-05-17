@@ -1,10 +1,23 @@
+function paymentsShowMessage(text, type = 'info') {
+  if (typeof window !== 'undefined' && typeof window.showMessage === 'function') {
+    return window.showMessage(text, type);
+  }
+
+  if (!text) return;
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = text;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const payButton = document.getElementById('payButton');
   if (!payButton) return;
 
   payButton.addEventListener('click', async () => {
     if (!wimpSchoolConfig.flutterwavePublicKey || wimpSchoolConfig.flutterwavePublicKey.includes('<YOUR_')) {
-      alert('Configure your Flutterwave public key in js/config.js before processing payments.');
+      paymentsShowMessage('Configure your Flutterwave public key in js/config.js before processing payments.', 'error');
       return;
     }
 
@@ -13,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
       await initializeFlutterwavePayment(payButton);
     } catch (error) {
       console.error('Payment initialization failed:', error);
-      alert('Unable to initialize payment. Please try again later.');
+      paymentsShowMessage('Unable to initialize payment. Please try again later.', 'error');
     }
   });
 });
@@ -74,12 +87,12 @@ async function initializeFlutterwavePayment(payButton) {
         if (statusLabel) {
           statusLabel.textContent = 'Payment successful. Thank you!';
         }
-        alert('Payment successful. Thank you!');
+        paymentsShowMessage('Payment successful. Thank you!', 'success');
       } else {
         if (statusLabel) {
           statusLabel.textContent = 'Payment was not completed. Please try again.';
         }
-        alert('Payment was not completed. Please try again.');
+        paymentsShowMessage('Payment was not completed. Please try again.', 'error');
       }
     },
     onclose: function() {

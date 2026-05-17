@@ -1,3 +1,16 @@
+function inviteShowMessage(text, type = 'info') {
+  if (typeof window !== 'undefined' && typeof window.showMessage === 'function') {
+    return window.showMessage(text, type);
+  }
+
+  if (!text) return;
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = text;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   const token = new URLSearchParams(window.location.search).get('token');
   if (!token) {
@@ -29,17 +42,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const password = document.getElementById('invitePassword').value;
     const confirmPassword = document.getElementById('inviteConfirmPassword').value;
     if (!password || password !== confirmPassword) {
-      alert('Please enter a matching password.');
+      inviteShowMessage('Please enter a matching password.', 'error');
       return;
     }
 
     const acceptResult = await acceptInvite(token, password);
     if (acceptResult.error) {
-      alert(acceptResult.error.message || 'Unable to activate your account.');
+      inviteShowMessage(acceptResult.error.message || 'Unable to activate your account.', 'error');
       return;
     }
 
-    alert('Your account is active. Please log in.');
+    inviteShowMessage('Your account is active. Please log in.', 'success');
     window.location.href = 'login.html';
   });
 });

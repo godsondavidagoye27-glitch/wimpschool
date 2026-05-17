@@ -1,12 +1,22 @@
 const feeChartElement = document.getElementById('feeChart');
 
+function getSavedSchoolId() {
+  const raw = sessionStorage.getItem('wimpschoolUser') || localStorage.getItem('wimpschoolUser');
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw)?.schoolId || null;
+  } catch (err) {
+    return null;
+  }
+}
+
 async function fetchRecentFeesByDay(schoolId) {
   try {
     if (!window.supabase) return null;
 
     const to = new Date();
     const from = new Date();
-    from.setDate(to.getDate() - 6); // last 7 days
+    from.setDate(to.getDate() - 6);
 
     const { data, error } = await supabase
       .from('payments')
@@ -17,13 +27,11 @@ async function fetchRecentFeesByDay(schoolId) {
 
     if (error) return null;
 
-    // Aggregate amounts by day
     const totals = {};
     for (let i = 0; i < 7; i++) {
       const d = new Date(from);
       d.setDate(from.getDate() + i);
-      const key = d.toISOString().slice(0, 10);
-      totals[key] = 0;
+      totals[d.toISOString().slice(0, 10)] = 0;
     }
 
     (data || []).forEach(row => {
@@ -43,25 +51,44 @@ function formatCurrencyShort(val) {
   return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(Number(val || 0));
 }
 
+async function renderRecentPayments() {
+  const paymentsList = document.getElementById('recentPaymentsList');
+  if (!paymentsList || !window.supabase) return;
+
+  const schoolId = getSavedSchoolId();
+  if (!schoolId) {
+    paymentsList.innerHTML = '<li>No recent payments available.</li>';
+    return;
+  }
+
+  const { data: payments, error } = await supabase
+    .from('payments')
+    .select('id, amount, status, student_id')
+    .eq('school_id', schoolId)
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  if (error || !payments?.length) {
+    paymentsList.innerHTML = '<li>No recent payments available.</li>';
+    return;
+  }
+
+  const studentIds = [...new Set(payments.map(item => item.student_id).filter(Boolean))];
+  const { data: students } = studentIds.length ? await supabase.from('students').select('id, name').in('id', studentIds) : { data: [] };
+  const studentMap = new Map((students || []).map(student => [student.id, student.name]));
+
+  paymentsList.innerHTML = payments.map(item => {
+    const studentName = studentMap.get(item.student_id) || 'Unknown student';
+    return `<li>${studentName} — ${formatCurrencyShort(item.amount)} — ${item.status || 'unknown'}</li>`;
+  }).join('');
+}
+
 async function renderFeeChart() {
   if (!feeChartElement) return;
 
-  // Try to obtain schoolId from session storage (set by app.js)
-  const raw = sessionStorage.getItem('wimpschoolUser') || localStorage.getItem('wimpschoolUser');
-  let schoolId = null;
-  try {
-    const session = raw ? JSON.parse(raw) : null;
-    schoolId = session?.schoolId || null;
-  } catch (e) {
-    schoolId = null;
-  }
+  const schoolId = getSavedSchoolId();
+  const totals = schoolId && window.supabase ? await fetchRecentFeesByDay(schoolId) : null;
 
-  let totals = null;
-  if (schoolId && window.supabase) {
-    totals = await fetchRecentFeesByDay(schoolId);
-  }
-
-  // Build labels and data for last 7 days
   const labels = [];
   const dataPoints = [];
   const today = new Date();
@@ -70,7 +97,7 @@ async function renderFeeChart() {
     d.setDate(today.getDate() - i);
     const key = d.toISOString().slice(0, 10);
     labels.push(d.toLocaleDateString(undefined, { weekday: 'short' }));
-    dataPoints.push(totals ? (totals[key] || 0) : [420000, 380000, 470000, 430000, 520000, 510000, 490000][6 - i]);
+    dataPoints.push((totals && totals[key] !== undefined) ? totals[key] : 0);
   }
 
   const ctx = feeChartElement.getContext('2d');
@@ -112,5 +139,6 @@ async function renderFeeChart() {
 }
 
 window.addEventListener('load', () => {
+  renderRecentPayments();
   renderFeeChart();
 });

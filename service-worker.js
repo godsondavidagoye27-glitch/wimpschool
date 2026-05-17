@@ -12,6 +12,8 @@ const ASSETS = [
   './teacher-dashboard.html',
   './parent-portal.html',
   './student-management.html',
+  './teacher-management.html',
+  './announcements.html',
   './super-admin-panel.html',
   './timetable.html',
   './fee-management.html',

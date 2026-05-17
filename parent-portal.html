@@ -15,11 +15,7 @@
   <header class="dashboard-header">
     <div class="brand">WimpSchool</div>
     <nav class="dashboard-nav">
-      <a href="teacher-dashboard.html">Teacher view</a>
-      <a href="school-admin-dashboard.html">Admin view</a>
-      <a href="index.html" data-logout class="btn btn-secondary small">Logout</a>
-    </nav>
-  </header>
+
 
   <main class="dashboard-main">
     <section class="dashboard-hero">
@@ -59,7 +55,7 @@
         <p>Pay school fees instantly with Flutterwave integration.</p>
       </div>
       <div class="payment-card">
-        <p>Outstanding balance: <strong>₦45,000</strong></p>
+        <p>Outstanding balance: <strong id="paymentBalance">₦0</strong></p>
         <button id="payButton" class="btn btn-primary">Pay with Flutterwave</button>
         <p id="paymentStatus" class="form-note"></p>
       </div>

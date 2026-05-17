@@ -277,6 +277,53 @@ input:focus, select:focus, textarea:focus {
   gap: 12px;
 }
 
+.form-note {
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin-top: 8px;
+  display: block;
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 14px 24px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  z-index: 9999;
+  box-shadow: 0 24px 70px rgba(26,31,94,.14);
+  animation: slideUp 0.3s ease;
+}
+
+.toast-info {
+  background: #1a1f5e;
+  color: #fff;
+}
+
+.toast-success {
+  background: #1a7a4a;
+  color: #fff;
+}
+
+.toast-error {
+  background: #e63a2e;
+  color: #fff;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateX(-50%) translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
 .divider {
   display: flex;
   align-items: center;
