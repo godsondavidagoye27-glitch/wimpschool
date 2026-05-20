@@ -2,6 +2,13 @@ const deferredPromptKey = 'wimpschoolDeferredPrompt';
 const SESSION_KEY = 'wimpschoolUser';
 const SESSION_TIMEOUT_MINUTES = 30;
 
+function setTextContentById(id, text) {
+  const element = document.getElementById(id);
+  if (element) {
+    element.textContent = text;
+  }
+}
+
 window.addEventListener('load', async () => {
   registerServiceWorker();
   listenInstallPrompt();
@@ -204,10 +211,10 @@ async function loadSchoolAdminDashboard() {
   const feesCollected = payments.filter(p => p.status === 'paid').reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const outstandingFees = payments.filter(p => p.status !== 'paid').reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
-  document.getElementById('totalStudents')?.textContent = totalStudents;
-  document.getElementById('totalTeachers')?.textContent = totalTeachers;
-  document.getElementById('feesCollected')?.textContent = formatCurrency(feesCollected);
-  document.getElementById('outstandingFees')?.textContent = formatCurrency(outstandingFees);
+  setTextContentById('totalStudents', totalStudents);
+  setTextContentById('totalTeachers', totalTeachers);
+  setTextContentById('feesCollected', formatCurrency(feesCollected));
+  setTextContentById('outstandingFees', formatCurrency(outstandingFees));
 
   const announcementsContainer = document.getElementById('parentNotices');
   if (announcementsContainer && announcementsResult.data) {
@@ -234,10 +241,10 @@ async function loadTeacherDashboard() {
   const presentCount = attendance.filter(item => item.status === 'present').length;
   const attendancePercent = attendance.length ? (presentCount / attendance.length) * 100 : 0;
 
-  document.getElementById('assignedClassesCount')?.textContent = classCount;
-  document.getElementById('pendingReportsCount')?.textContent = pendingReports;
-  document.getElementById('unreadMessagesCount')?.textContent = '5 unread';
-  document.getElementById('todayAttendancePercent')?.textContent = formatPercent(attendancePercent);
+  setTextContentById('assignedClassesCount', classCount);
+  setTextContentById('pendingReportsCount', pendingReports);
+  setTextContentById('unreadMessagesCount', '5 unread');
+  setTextContentById('todayAttendancePercent', formatPercent(attendancePercent));
 
   const attendanceList = document.getElementById('attendanceList');
   if (attendanceList) {
@@ -285,11 +292,11 @@ async function loadParentPortal() {
   const presentCount = (attendanceResult.data || []).filter(item => item.status === 'present').length;
   const attendancePercent = attendanceResult.data?.length ? (presentCount / attendanceResult.data.length) * 100 : 0;
 
-  document.getElementById('childName')?.textContent = student?.name || parentData?.name || 'Not available';
-  document.getElementById('studentId')?.textContent = student?.student_code || student?.id || 'N/A';
-  document.getElementById('balanceAmount')?.textContent = formatCurrency(outstanding);
-  document.getElementById('paymentBalance')?.textContent = formatCurrency(outstanding);
-  document.getElementById('attendancePercent')?.textContent = formatPercent(attendancePercent);
+  setTextContentById('childName', student?.name || parentData?.name || 'Not available');
+  setTextContentById('studentId', student?.student_code || student?.id || 'N/A');
+  setTextContentById('balanceAmount', formatCurrency(outstanding));
+  setTextContentById('paymentBalance', formatCurrency(outstanding));
+  setTextContentById('attendancePercent', formatPercent(attendancePercent));
 
   const noticesContainer = document.getElementById('parentNotices');
   if (noticesContainer) {
@@ -327,9 +334,12 @@ async function loadAttendancePage() {
     }
   }
 
-  document.getElementById('attendanceActionText')?.textContent = teacherResult.data?.name
-    ? `Welcome ${teacherResult.data.name}, choose a class to take attendance.`
-    : 'Select a class and record attendance for today.';
+  const attendanceActionTextEl = document.getElementById('attendanceActionText');
+  if (attendanceActionTextEl) {
+    attendanceActionTextEl.textContent = teacherResult.data?.name
+      ? `Welcome ${teacherResult.data.name}, choose a class to take attendance.`
+      : 'Select a class and record attendance for today.';
+  }
 }
 
 async function attachStudentManagementHandlers() {

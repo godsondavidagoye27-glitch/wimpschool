@@ -3,8 +3,8 @@ const supabaseClient = (window.supabase || window.Supabase).createClient(
   wimpSchoolConfig.supabaseKey
 );
 
-window.supabase = supabaseClient;
-const supabase = supabaseClient;
+window.supabase = window.supabase || supabaseClient;
+var supabase = window.supabase;
 
 async function fetchUserRole(userId) {
   const { data, error } = await supabase
