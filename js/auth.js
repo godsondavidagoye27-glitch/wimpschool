@@ -23,34 +23,32 @@ function initSupabaseClient() {
     return null;
   }
 
+  // Always create a client from the library's createClient method
   if (typeof SupabaseLib.createClient === 'function') {
     const client = SupabaseLib.createClient(supabaseUrl, supabaseKey);
-    window.supabase = client;
     return client;
   }
 
-  if (SupabaseLib.auth) {
-    window.supabase = SupabaseLib;
-    return SupabaseLib;
-  }
-
-  console.error('Supabase SDK does not expose createClient or auth.');
+  console.error('Supabase SDK does not expose createClient function.');
   return null;
 }
 
-// Ensure the Supabase client is initialized on page load (without creating a duplicate global binding)
+// Ensure the Supabase client is initialized on page load
 const _supabaseClient = initSupabaseClient();
 if (_supabaseClient) {
   window.supabase = _supabaseClient;
 }
 
 function getSupabase() {
-  if (window.supabase && typeof window.supabase.auth === 'object') {
+  // Return cached client if available and valid
+  if (window.supabase && typeof window.supabase.auth === 'object' && typeof window.supabase.auth.signUp === 'function') {
     return window.supabase;
   }
 
+  // Otherwise initialize a fresh client
   const client = initSupabaseClient();
   if (client) {
+    window.supabase = client;
     return client;
   }
 
