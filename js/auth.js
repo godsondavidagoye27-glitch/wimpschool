@@ -1,13 +1,69 @@
-const supabaseClient = (window.supabase || window.Supabase).createClient(
-  wimpSchoolConfig.supabaseUrl,
-  wimpSchoolConfig.supabaseKey
-);
+function initSupabaseClient() {
+  const SupabaseLib = window.supabase || window.Supabase;
 
-window.supabase = window.supabase || supabaseClient;
-var supabase = window.supabase;
+  if (!SupabaseLib) {
+    console.error('Supabase SDK not loaded. Make sure the CDN script tag comes before auth.js.');
+    return null;
+  }
+
+  if (!window.wimpSchoolConfig) {
+    console.error('wimpSchoolConfig not found. Run: node scripts/generate-config.js.');
+    return null;
+  }
+
+  const { supabaseUrl, supabaseKey } = window.wimpSchoolConfig;
+
+  if (!supabaseUrl || supabaseUrl.includes('<YOUR_')) {
+    console.error('Supabase URL not configured. Fill in .env and run generate-config.js.');
+    return null;
+  }
+
+  if (!supabaseKey || supabaseKey.includes('<YOUR_')) {
+    console.error('Supabase key not configured. Fill in .env and run generate-config.js.');
+    return null;
+  }
+
+  if (typeof SupabaseLib.createClient === 'function') {
+    const client = SupabaseLib.createClient(supabaseUrl, supabaseKey);
+    window.supabase = client;
+    return client;
+  }
+
+  if (SupabaseLib.auth) {
+    window.supabase = SupabaseLib;
+    return SupabaseLib;
+  }
+
+  console.error('Supabase SDK does not expose createClient or auth.');
+  return null;
+}
+
+// Ensure the Supabase client is initialized on page load (without creating a duplicate global binding)
+const _supabaseClient = initSupabaseClient();
+if (_supabaseClient) {
+  window.supabase = _supabaseClient;
+}
+
+function getSupabase() {
+  if (window.supabase && typeof window.supabase.auth === 'object') {
+    return window.supabase;
+  }
+
+  const client = initSupabaseClient();
+  if (client) {
+    return client;
+  }
+
+  return null;
+}
 
 async function fetchUserRole(userId) {
-  const { data, error } = await supabase
+  const client = getSupabase();
+  if (!client) {
+    return { error: { message: 'Supabase is not initialized. Check your configuration and script order.' } };
+  }
+
+  const { data, error } = await client
     .from('user_roles')
     .select('role, school_id')
     .eq('user_id', userId)
@@ -25,7 +81,12 @@ async function fetchUserRole(userId) {
 }
 
 async function signIn(email, password) {
-  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+  const client = getSupabase();
+  if (!client) {
+    return { error: { message: 'Supabase is not initialized.' } };
+  }
+
+  const { data: authData, error: authError } = await client.auth.signInWithPassword({
     email,
     password
   });
@@ -54,7 +115,12 @@ async function signIn(email, password) {
 }
 
 async function signUpSchoolAdmin(payload) {
-  const { data: signupData, error: signupError } = await supabase.auth.signUp({
+  const client = getSupabase();
+  if (!client) {
+    return { error: { message: 'Supabase is not initialized. Check your configuration and script order.' } };
+  }
+
+  const { data: signupData, error: signupError } = await client.auth.signUp({
     email: payload.adminEmail,
     password: payload.adminPassword,
     options: {
@@ -74,7 +140,7 @@ async function signUpSchoolAdmin(payload) {
     return { error: { message: 'Unable to create the school administrator account.' } };
   }
 
-  const { data: schoolData, error: schoolError } = await supabase
+  const { data: schoolData, error: schoolError } = await client
     .from('schools')
     .insert([
       {
@@ -98,7 +164,7 @@ async function signUpSchoolAdmin(payload) {
     return { error: { message: 'School registration failed.' } };
   }
 
-  const { error: roleError } = await supabase.from('user_roles').insert([
+  const { error: roleError } = await client.from('user_roles').insert([
     { user_id: userId, role: 'school_admin', school_id: schoolId }
   ]);
 
@@ -115,7 +181,12 @@ async function signUpSchoolAdmin(payload) {
 }
 
 async function sendPasswordReset(email) {
-  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+  const client = getSupabase();
+  if (!client) {
+    return { error: { message: 'Supabase is not initialized. Check your configuration and script order.' } };
+  }
+
+  const { data, error } = await client.auth.resetPasswordForEmail(email, {
     redirectTo: `${window.location.origin}/login.html`
   });
 
@@ -127,7 +198,12 @@ async function verifyInviteToken(token) {
     return { error: { message: 'Invite token is missing.' } };
   }
 
-  const { data: parent, error: parentError } = await supabase
+  const client = getSupabase();
+  if (!client) {
+    return { error: { message: 'Supabase is not initialized. Check your configuration and script order.' } };
+  }
+
+  const { data: parent, error: parentError } = await client
     .from('parents')
     .select('id, name, email, phone, student_id, invite_token, account_created, school_id')
     .eq('invite_token', token)
@@ -137,7 +213,7 @@ async function verifyInviteToken(token) {
     return { data: { ...parent, role: 'parent' } };
   }
 
-  const { data: teacher, error: teacherError } = await supabase
+  const { data: teacher, error: teacherError } = await client
     .from('teachers')
     .select('id, name, email, subjects, classes, invite_token, account_created, school_id')
     .eq('invite_token', token)
@@ -151,6 +227,11 @@ async function verifyInviteToken(token) {
 }
 
 async function acceptInvite(token, password) {
+  const client = getSupabase();
+  if (!client) {
+    return { error: { message: 'Supabase is not initialized. Check your configuration and script order.' } };
+  }
+
   const inviteResult = await verifyInviteToken(token);
   if (inviteResult.error) {
     return { error: inviteResult.error };
@@ -161,7 +242,7 @@ async function acceptInvite(token, password) {
     return { error: { message: 'This invite has already been used.' } };
   }
 
-  const signUpResult = await supabase.auth.signUp({
+  const signUpResult = await client.auth.signUp({
     email: invite.email,
     password,
     options: {
@@ -187,7 +268,7 @@ async function acceptInvite(token, password) {
     user_id: userId
   };
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await client
     .from(targetTable)
     .update(updatePayload)
     .eq('invite_token', token);
@@ -196,7 +277,7 @@ async function acceptInvite(token, password) {
     return { error: updateError };
   }
 
-  const { error: roleError } = await supabase.from('user_roles').insert([
+  const { error: roleError } = await client.from('user_roles').insert([
     { user_id: userId, role: invite.role, school_id: invite.school_id || null }
   ]);
 
