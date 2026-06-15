@@ -15,7 +15,7 @@ window.addEventListener('load', async () => {
   const allowed = await enforcePageRole();
   if (!allowed) {
     return;
-  }
+  } 
   await loadPageData();
   await loadPageScripts();
   attachLogoutHandlers();
@@ -142,7 +142,10 @@ function attachLogoutHandlers() {
 
 async function handleLogout() {
   clearSession();
-  await supabase.auth.signOut();
+  const client = window.getSupabase ? window.getSupabase() : null;
+  if (client) {
+    await client.auth.signOut();
+  }
   window.location.href = 'login.html';
 }
 
@@ -198,11 +201,14 @@ async function loadSchoolAdminDashboard() {
   const schoolId = session?.schoolId;
   if (!schoolId) return;
 
+  const client = window.getSupabase ? window.getSupabase() : null;
+  if (!client) return;
+
   const [studentsResult, teachersResult, paymentsResult, announcementsResult] = await Promise.all([
-    supabase.from('students').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
-    supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
-    supabase.from('payments').select('amount, status').eq('school_id', schoolId),
-    supabase.from('announcements').select('title, body, created_at').eq('school_id', schoolId).order('created_at', { ascending: false }).limit(3)
+    client.from('students').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
+    client.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
+    client.from('payments').select('amount, status').eq('school_id', schoolId),
+    client.from('announcements').select('title, body, created_at').eq('school_id', schoolId).order('created_at', { ascending: false }).limit(3)
   ]);
 
   const totalStudents = studentsResult.count || 0;
@@ -228,11 +234,14 @@ async function loadTeacherDashboard() {
   const session = loadSession();
   if (!session) return;
 
+  const client = window.getSupabase ? window.getSupabase() : null;
+  if (!client) return;
+
   const { userId, schoolId } = session;
   const [teacherResult, resultsResult, attendanceResult] = await Promise.all([
-    supabase.from('teachers').select('id, name, subjects, classes').eq('user_id', userId).single(),
-    supabase.from('results').select('id').eq('school_id', schoolId).eq('submitted', false),
-    supabase.from('attendance').select('class, status').eq('school_id', schoolId).eq('teacher_id', userId)
+    client.from('teachers').select('id, name, subjects, classes').eq('user_id', userId).single(),
+    client.from('results').select('id').eq('school_id', schoolId).eq('submitted', false),
+    client.from('attendance').select('class, status').eq('school_id', schoolId).eq('teacher_id', userId)
   ]);
 
   const classCount = Array.isArray(teacherResult.data?.classes) ? teacherResult.data.classes.length : (teacherResult.data?.classes ? 1 : 0);
@@ -260,11 +269,14 @@ async function loadParentPortal() {
   const session = loadSession();
   if (!session) return;
 
+  const client = window.getSupabase ? window.getSupabase() : null;
+  if (!client) return;
+
   const { userId, schoolId } = session;
-  const { data: parentData } = await supabase.from('parents').select('id, name, student_id, phone').eq('user_id', userId).single();
+  const { data: parentData } = await client.from('parents').select('id, name, student_id, phone').eq('user_id', userId).single();
   const studentId = session.studentId || parentData?.student_id;
 
-  const paymentsQuery = supabase.from('payments').select('amount, status').limit(20);
+  const paymentsQuery = client.from('payments').select('amount, status').limit(20);
   if (parentData?.id && studentId) {
     paymentsQuery.or(`parent_id.eq.${parentData.id},student_id.eq.${studentId}`);
   } else if (parentData?.id) {
@@ -276,14 +288,14 @@ async function loadParentPortal() {
   }
 
   const attendancePromise = studentId
-    ? supabase.from('attendance').select('status').eq('student_id', studentId)
+    ? client.from('attendance').select('status').eq('student_id', studentId)
     : Promise.resolve({ data: [] });
 
   const [studentResult, paymentsResult, attendanceResult, announcementsResult] = await Promise.all([
-    supabase.from('students').select('id, name, student_code, class_name').eq('id', studentId).single(),
+    client.from('students').select('id, name, student_code, class_name').eq('id', studentId).single(),
     paymentsQuery,
     attendancePromise,
-    supabase.from('announcements').select('title, body, created_at').eq('school_id', schoolId).order('created_at', { ascending: false }).limit(3)
+    client.from('announcements').select('title, body, created_at').eq('school_id', schoolId).order('created_at', { ascending: false }).limit(3)
   ]);
 
   const student = studentResult.data;
@@ -317,12 +329,14 @@ async function loadParentPortal() {
 async function loadAttendancePage() {
   const session = loadSession();
   if (!session) return;
+  const client = window.getSupabase ? window.getSupabase() : null;
+  if (!client) return;
   const { userId, schoolId } = session;
   const attendanceList = document.getElementById('attendanceDetailsList');
 
   const [attendanceResult, teacherResult] = await Promise.all([
-    supabase.from('attendance').select('class, status').eq('school_id', schoolId).eq('teacher_id', userId).limit(10),
-    supabase.from('teachers').select('name').eq('user_id', userId).single()
+    client.from('attendance').select('class, status').eq('school_id', schoolId).eq('teacher_id', userId).limit(10),
+    client.from('teachers').select('name').eq('user_id', userId).single()
   ]);
 
   if (attendanceList) {
@@ -491,7 +505,10 @@ async function loadFeeManagementPage() {
   const feeHistory = document.getElementById('feeHistory');
   if (!session?.schoolId || !feeHistory) return;
 
-  const { data, error } = await supabase.from('payments').select('student_id, amount, status, method, tx_ref').eq('school_id', session.schoolId).order('created_at', { ascending: false }).limit(20);
+  const client = window.getSupabase ? window.getSupabase() : null;
+  if (!client) return;
+
+  const { data, error } = await client.from('payments').select('student_id, amount, status, method, tx_ref').eq('school_id', session.schoolId).order('created_at', { ascending: false }).limit(20);
   if (error) {
     feeHistory.textContent = 'Unable to load payment history.';
     return;
@@ -535,13 +552,32 @@ async function loginUser(email, password, remember) {
 }
 
 async function registerSchool(payload) {
-  const result = await signUpSchoolAdmin(payload);
-  if (result.error) {
-    return showMessage(result.error.message || 'Registration failed.');
+  const submitBtn = document.querySelector('#registerForm button[type="submit"]');
+  if (submitBtn) {
+    submitBtn.textContent = 'Creating account...';
+    submitBtn.disabled = true;
   }
 
-  showMessage('Registration complete. Please verify your email and log in.');
-  window.location.href = 'login.html';
+  try {
+    const result = await signUpSchoolAdmin(payload);
+    if (result.error) {
+      showMessage(result.error.message || 'Registration failed. Please try again.', 'error');
+      return;
+    }
+
+    showMessage('School registered! Check your email to verify.', 'success');
+    setTimeout(() => {
+      window.location.href = 'login.html';
+    }, 1500);
+  } catch (err) {
+    console.error('registerSchool error:', err);
+    showMessage('An unexpected error occurred. Check the browser console for details.', 'error');
+  } finally {
+    if (submitBtn) {
+      submitBtn.textContent = 'Create school account';
+      submitBtn.disabled = false;
+    }
+  }
 }
 
 async function verifySuperAdminSecret(secret) {
@@ -549,7 +585,12 @@ async function verifySuperAdminSecret(secret) {
     return { error: { message: 'Super admin secret key is required.' } };
   }
 
-  const response = await supabase.functions.invoke('super-admin-login', {
+  const client = window.getSupabase ? window.getSupabase() : null;
+  if (!client) {
+    return { error: { message: 'Supabase client not initialized.' } };
+  }
+
+  const response = await client.functions.invoke('super-admin-login', {
     body: JSON.stringify({ secret }),
     headers: { 'Content-Type': 'application/json' }
   });
@@ -605,7 +646,13 @@ async function enforcePageRole() {
 
   hideProtectedContent();
 
-  const sessionInfo = await supabase.auth.getSession();
+  const client = window.getSupabase ? window.getSupabase() : null;
+  if (!client) {
+    window.location.href = 'login.html';
+    return false;
+  }
+
+  const sessionInfo = await client.auth.getSession();
   if (!sessionInfo?.data?.session?.user) {
     window.location.href = 'login.html';
     return false;
