@@ -19,14 +19,22 @@ function parseEnv(content) {
   return obj;
 }
 
-if (!fs.existsSync(envPath)) {
-  console.error('.env file not found. Copy .env.example to .env and fill values.');
-  process.exit(1);
+let env = {};
+const requiredKeys = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'FLUTTERWAVE_PUBLIC_KEY'];
+
+if (fs.existsSync(envPath)) {
+  env = parseEnv(fs.readFileSync(envPath, 'utf8'));
+} else {
+  console.warn('.env file not found. Falling back to environment variables.');
 }
 
-const env = parseEnv(fs.readFileSync(envPath, 'utf8'));
-const requiredKeys = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'FLUTTERWAVE_PUBLIC_KEY'];
-const missing = requiredKeys.filter(key => !env[key]);
+for (const key of requiredKeys) {
+  if (!env[key] && process.env[key]) {
+    env[key] = process.env[key];
+  }
+}
+
+const missing = requiredKeys.filter(key => !env[key] || !env[key].trim());
 
 if (missing.length) {
   console.error('Missing required environment variables:', missing.join(', '));

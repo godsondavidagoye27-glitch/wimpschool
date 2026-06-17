@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "start": "node ./node_modules/live-server/live-server.js --port=8000 --entry-file=index.html",
-    "generate-config": "node scripts/generate-config.js"
+    "generate-config": "node scripts/generate-config.js",
+    "postinstall": "node scripts/generate-config.js"
   },
   "dependencies": {
     "live-server": "^1.2.2"
