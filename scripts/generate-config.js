@@ -25,11 +25,17 @@ const requiredKeys = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'FLUTTERWAVE_PUBLIC_K
 if (fs.existsSync(envPath)) {
   env = parseEnv(fs.readFileSync(envPath, 'utf8'));
 } else {
-  console.warn('.env file not found. Falling back to environment variables.');
+  const examplePath = path.join(__dirname, '..', '.env.example');
+  if (fs.existsSync(examplePath)) {
+    console.warn('.env file not found. Falling back to .env.example values.');
+    env = parseEnv(fs.readFileSync(examplePath, 'utf8'));
+  } else {
+    console.warn('.env file not found, and .env.example is missing. Falling back to environment variables.');
+  }
 }
 
 for (const key of requiredKeys) {
-  if (!env[key] && process.env[key]) {
+  if ((!env[key] || !env[key].trim()) && process.env[key]) {
     env[key] = process.env[key];
   }
 }
