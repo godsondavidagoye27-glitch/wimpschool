@@ -52,6 +52,10 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  const requestUrl = new URL(event.request.url);
+  const isSameOrigin = requestUrl.origin === self.location.origin;
+  const isAssetRequest = /\.(js|css|html|json|png|jpg|jpeg|svg|webmanifest)$/i.test(requestUrl.pathname);
+
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -62,6 +66,21 @@ self.addEventListener('fetch', event => {
           });
         })
         .catch(() => caches.match(OFFLINE_URL))
+    );
+    return;
+  }
+
+  if (isSameOrigin && isAssetRequest) {
+    event.respondWith(
+      fetch(event.request)
+        .then(networkResponse => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request).then(cachedResponse => cachedResponse || caches.match(OFFLINE_URL)))
     );
     return;
   }

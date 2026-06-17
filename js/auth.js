@@ -1,6 +1,26 @@
-function initSupabaseClient() {
-  const SupabaseLib = window.supabase || window.Supabase;
+function isSupabaseClient(value) {
+  return value
+    && typeof value.auth === 'object'
+    && typeof value.auth.signInWithPassword === 'function'
+    && typeof value.auth.signUp === 'function'
+    && typeof value.from === 'function';
+}
 
+function getSupabaseLibrary() {
+  if (window.Supabase && typeof window.Supabase.createClient === 'function') {
+    return window.Supabase;
+  }
+
+  if (window.supabase && typeof window.supabase.createClient === 'function') {
+    window.Supabase = window.supabase;
+    return window.Supabase;
+  }
+
+  return null;
+}
+
+function initSupabaseClient() {
+  const SupabaseLib = getSupabaseLibrary();
   if (!SupabaseLib) {
     console.error('Supabase SDK not loaded. Make sure the CDN script tag comes before auth.js.');
     return null;
@@ -23,14 +43,14 @@ function initSupabaseClient() {
     return null;
   }
 
-  // Always create a client from the library's createClient method
-  if (typeof SupabaseLib.createClient === 'function') {
-    const client = SupabaseLib.createClient(supabaseUrl, supabaseKey);
-    return client;
+  const client = SupabaseLib.createClient(supabaseUrl, supabaseKey);
+  if (!isSupabaseClient(client)) {
+    console.error('Supabase client initialization failed. Client object is invalid.');
+    return null;
   }
 
-  console.error('Supabase SDK does not expose createClient function.');
-  return null;
+  window.supabaseClient = client;
+  return client;
 }
 
 // Ensure the Supabase client is initialized on page load
@@ -40,12 +60,15 @@ if (_supabaseClient) {
 }
 
 function getSupabase() {
-  // Return cached client if available and valid
-  if (window.supabase && typeof window.supabase.auth === 'object' && typeof window.supabase.auth.signUp === 'function') {
+  if (isSupabaseClient(window.supabaseClient)) {
+    return window.supabaseClient;
+  }
+
+  if (isSupabaseClient(window.supabase)) {
+    window.supabaseClient = window.supabase;
     return window.supabase;
   }
 
-  // Otherwise initialize a fresh client
   const client = initSupabaseClient();
   if (client) {
     window.supabase = client;

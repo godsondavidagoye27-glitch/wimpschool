@@ -12,13 +12,14 @@ function getSavedSchoolId() {
 
 async function fetchRecentFeesByDay(schoolId) {
   try {
-    if (!window.supabase) return null;
+    const client = window.getSupabase ? window.getSupabase() : null;
+    if (!client) return null;
 
     const to = new Date();
     const from = new Date();
     from.setDate(to.getDate() - 6);
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('payments')
       .select('amount, created_at')
       .eq('school_id', schoolId)
@@ -53,7 +54,8 @@ function formatCurrencyShort(val) {
 
 async function renderRecentPayments() {
   const paymentsList = document.getElementById('recentPaymentsList');
-  if (!paymentsList || !window.supabase) return;
+  const client = window.getSupabase ? window.getSupabase() : null;
+  if (!paymentsList || !client) return;
 
   const schoolId = getSavedSchoolId();
   if (!schoolId) {
@@ -61,7 +63,7 @@ async function renderRecentPayments() {
     return;
   }
 
-  const { data: payments, error } = await supabase
+  const { data: payments, error } = await client
     .from('payments')
     .select('id, amount, status, student_id')
     .eq('school_id', schoolId)
@@ -74,7 +76,7 @@ async function renderRecentPayments() {
   }
 
   const studentIds = [...new Set(payments.map(item => item.student_id).filter(Boolean))];
-  const { data: students } = studentIds.length ? await supabase.from('students').select('id, name').in('id', studentIds) : { data: [] };
+  const { data: students } = studentIds.length ? await client.from('students').select('id, name').in('id', studentIds) : { data: [] };
   const studentMap = new Map((students || []).map(student => [student.id, student.name]));
 
   paymentsList.innerHTML = payments.map(item => {
@@ -87,7 +89,8 @@ async function renderFeeChart() {
   if (!feeChartElement) return;
 
   const schoolId = getSavedSchoolId();
-  const totals = schoolId && window.supabase ? await fetchRecentFeesByDay(schoolId) : null;
+  const client = window.getSupabase ? window.getSupabase() : null;
+  const totals = schoolId && client ? await fetchRecentFeesByDay(schoolId) : null;
 
   const labels = [];
   const dataPoints = [];

@@ -163,13 +163,15 @@ function formatPercent(value) {
 
 async function loadPageData() {
   const requiredRole = document.body.dataset.requiredRole;
+  const pageType = document.body.dataset.page;
   if (!requiredRole) return;
 
-  if (requiredRole === 'school_admin') {
+  // Only run dashboard loading on actual dashboard pages, not on all pages with that role
+  if (requiredRole === 'school_admin' && !pageType) {
     await loadSchoolAdminDashboard();
-  } else if (requiredRole === 'teacher') {
+  } else if (requiredRole === 'teacher' && !pageType) {
     await loadTeacherDashboard();
-  } else if (requiredRole === 'parent') {
+  } else if (requiredRole === 'parent' && pageType === 'parent-portal') {
     await loadParentPortal();
   }
 }
@@ -629,12 +631,23 @@ async function superAdminLogin(email, password, secret) {
 }
 
 async function requestPasswordReset(email) {
-  const { error } = await sendPasswordReset(email);
-  if (error) {
-    return showMessage(error.message || 'Unable to send reset email.');
+  const status = document.getElementById('forgotStatus');
+  if (status) {
+    status.textContent = 'Sending password reset link...';
   }
 
-  showMessage('If this email is registered, a password reset link will be sent.');
+  const { error } = await sendPasswordReset(email);
+  if (error) {
+    if (status) {
+      status.textContent = error.message || 'Unable to send reset email.';
+    }
+    return showMessage(error.message || 'Unable to send reset email.', 'error');
+  }
+
+  if (status) {
+    status.textContent = 'If this email is registered, a password reset link will be sent.';
+  }
+  showMessage('If this email is registered, a password reset link will be sent.', 'success');
 }
 
 async function enforcePageRole() {
@@ -734,10 +747,22 @@ if (document.getElementById('superAdminForm')) {
 }
 
 if (document.getElementById('forgotForm')) {
-  document.getElementById('forgotForm').addEventListener('submit', event => {
+  document.getElementById('forgotForm').addEventListener('submit', async event => {
     event.preventDefault();
     const email = document.getElementById('resetEmail').value.trim();
     if (!email) return showMessage('Enter your email address.');
-    requestPasswordReset(email);
+
+    const submitButton = event.target.querySelector('button[type="submit"]');
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = 'Sending...';
+    }
+
+    await requestPasswordReset(email);
+
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = 'Send reset link';
+    }
   });
 }
