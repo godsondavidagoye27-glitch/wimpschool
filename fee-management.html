@@ -53,5 +53,103 @@
   <script src="js/auth.js"></script>
   <script src="js/backend.js"></script>
   <script src="js/app.js"></script>
+  <script>
+    // Get school ID from session
+    function getSavedSchoolId() {
+      const raw = sessionStorage.getItem('wimpschoolUser') || localStorage.getItem('wimpschoolUser');
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw)?.schoolId || null;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function formatCurrencyShort(val) {
+      return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(Number(val || 0));
+    }
+
+    // Load payment history
+    async function loadPaymentHistory() {
+      const feeHistory = document.getElementById('feeHistory');
+      if (!feeHistory) return;
+
+      const client = window.getSupabase ? window.getSupabase() : null;
+      const schoolId = getSavedSchoolId();
+      
+      if (!client || !schoolId) {
+        feeHistory.innerHTML = '<p>Unable to load payment history.</p>';
+        return;
+      }
+
+      const { data: payments, error } = await client
+        .from('payments')
+        .select('id, amount, status, method, student_id, created_at')
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error || !payments?.length) {
+        feeHistory.innerHTML = '<p>No payment records yet.</p>';
+        return;
+      }
+
+      // Get student names
+      const studentIds = [...new Set(payments.map(p => p.student_id).filter(Boolean))];
+      let studentMap = new Map();
+      
+      if (studentIds.length) {
+        const { data: students } = await client
+          .from('students')
+          .select('id, name, student_code')
+          .in('id', studentIds);
+        
+        studentMap = new Map((students || []).map(s => [s.id, `${s.name} (${s.student_code})`]));
+      }
+
+      const formatDate = (dateStr) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString();
+      };
+
+      const statusColor = (status) => {
+        switch(status) {
+          case 'success': return '#10b981';
+          case 'pending': return '#f59e0b';
+          case 'failed': return '#e63a2e';
+          default: return '#666';
+        }
+      };
+
+      const html = `
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="border-bottom: 2px solid #e63a2e;">
+              <th style="text-align: left; padding: 8px;">Student</th>
+              <th style="text-align: left; padding: 8px;">Amount</th>
+              <th style="text-align: left; padding: 8px;">Method</th>
+              <th style="text-align: left; padding: 8px;">Status</th>
+              <th style="text-align: left; padding: 8px;">Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${payments.map(payment => `
+              <tr style="border-bottom: 1px solid #ddd;">
+                <td style="padding: 8px;">${studentMap.get(payment.student_id) || 'Unknown'}</td>
+                <td style="padding: 8px; font-weight: bold;">${formatCurrencyShort(payment.amount)}</td>
+                <td style="padding: 8px;">${payment.method || '—'}</td>
+                <td style="padding: 8px; color: ${statusColor(payment.status)}; font-weight: bold;">${payment.status || 'unknown'}</td>
+                <td style="padding: 8px;">${formatDate(payment.created_at)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+      feeHistory.innerHTML = html;
+    }
+
+    // Load on page load
+    window.addEventListener('load', loadPaymentHistory);
+  </script>
 </body>
 </html>

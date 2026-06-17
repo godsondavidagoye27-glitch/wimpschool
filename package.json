@@ -4,7 +4,7 @@
   "description": "WimpSchool static web platform scaffold",
   "private": true,
   "scripts": {
-    "start": "live-server --port=8000 --entry-file=index.html",
+    "start": "node ./node_modules/live-server/bin/live-server.js --port=8000 --entry-file=index.html",
     "generate-config": "node scripts/generate-config.js"
   },
   "dependencies": {

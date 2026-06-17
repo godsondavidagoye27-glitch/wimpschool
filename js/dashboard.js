@@ -141,7 +141,112 @@ async function renderFeeChart() {
   });
 }
 
+async function fetchStudentCount() {
+  const element = document.getElementById('totalStudents');
+  if (!element) return;
+
+  const client = window.getSupabase ? window.getSupabase() : null;
+  const schoolId = getSavedSchoolId();
+  
+  if (!client || !schoolId) {
+    element.textContent = '0';
+    return;
+  }
+
+  const { count, error } = await client
+    .from('students')
+    .select('id', { count: 'exact', head: true })
+    .eq('school_id', schoolId);
+
+  element.textContent = error ? '0' : (count || 0);
+}
+
+async function fetchTeacherCount() {
+  const element = document.getElementById('totalTeachers');
+  if (!element) return;
+
+  const client = window.getSupabase ? window.getSupabase() : null;
+  const schoolId = getSavedSchoolId();
+  
+  if (!client || !schoolId) {
+    element.textContent = '0';
+    return;
+  }
+
+  const { count, error } = await client
+    .from('teachers')
+    .select('id', { count: 'exact', head: true })
+    .eq('school_id', schoolId);
+
+  element.textContent = error ? '0' : (count || 0);
+}
+
+async function fetchFeesCollectedToday() {
+  const element = document.getElementById('feesCollected');
+  if (!element) return;
+
+  const client = window.getSupabase ? window.getSupabase() : null;
+  const schoolId = getSavedSchoolId();
+  
+  if (!client || !schoolId) {
+    element.textContent = '₦0';
+    return;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const { data, error } = await client
+    .from('payments')
+    .select('amount')
+    .eq('school_id', schoolId)
+    .eq('status', 'success')
+    .gte('created_at', today.toISOString())
+    .lt('created_at', tomorrow.toISOString());
+
+  if (error || !data?.length) {
+    element.textContent = '₦0';
+    return;
+  }
+
+  const total = data.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  element.textContent = formatCurrencyShort(total);
+}
+
+async function fetchOutstandingFees() {
+  const element = document.getElementById('outstandingFees');
+  if (!element) return;
+
+  const client = window.getSupabase ? window.getSupabase() : null;
+  const schoolId = getSavedSchoolId();
+  
+  if (!client || !schoolId) {
+    element.textContent = '₦0';
+    return;
+  }
+
+  const { data, error } = await client
+    .from('payments')
+    .select('amount')
+    .eq('school_id', schoolId)
+    .neq('status', 'success');
+
+  if (error || !data?.length) {
+    element.textContent = '₦0';
+    return;
+  }
+
+  const total = data.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  element.textContent = formatCurrencyShort(total);
+}
+
 window.addEventListener('load', () => {
+  fetchStudentCount();
+  fetchTeacherCount();
+  fetchFeesCollectedToday();
+  fetchOutstandingFees();
   renderRecentPayments();
   renderFeeChart();
 });
