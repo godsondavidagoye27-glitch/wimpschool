@@ -26,6 +26,16 @@
       <p>One login for parents, teachers, and school admins. We’ll redirect you to the right dashboard.</p>
 
       <form id="loginForm">
+        <div class="form-row" style="flex-wrap: wrap; gap: 12px; margin-bottom: 18px;">
+          <label>Login as</label>
+          <select id="loginRole" style="flex: 1 1 100%; padding: 14px 18px; border: 1px solid var(--border); border-radius: 16px;">
+            <option value="">Choose role</option>
+            <option value="school_admin">School administrator</option>
+            <option value="teacher">Teacher</option>
+            <option value="parent">Parent</option>
+          </select>
+        </div>
+
         <label>Email</label>
         <input type="email" id="email" placeholder="you@example.com" required />
 

@@ -562,10 +562,15 @@ async function attachParentPortalHandlers() {
   });
 }
 
-async function loginUser(email, password, remember) {
+async function loginUser(email, password, remember, expectedRole) {
   const { data, error } = await signIn(email, password);
   if (error) {
-    return showMessage(error.message || 'Login failed.');
+    return showMessage(error.message || 'Login failed.', 'error');
+  }
+
+  if (expectedRole && expectedRole !== '' && data.role !== expectedRole) {
+    const friendlyRole = expectedRole.replace('_', ' ');
+    return showMessage(`This account is not a ${friendlyRole}. Please choose the correct portal or use the correct login mode.`, 'error');
   }
 
   saveSession({
@@ -774,12 +779,17 @@ if (document.getElementById('loginForm')) {
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     const remember = document.getElementById('rememberMe').checked;
+    const expectedRole = document.getElementById('loginRole')?.value || '';
 
     if (!email || !password) {
-      return showMessage('Please enter your email and password.');
+      return showMessage('Please enter your email and password.', 'error');
     }
 
-    loginUser(email, password, remember);
+    if (!expectedRole) {
+      return showMessage('Please select your login mode.', 'error');
+    }
+
+    loginUser(email, password, remember, expectedRole);
   });
 }
 
