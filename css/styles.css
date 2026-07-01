@@ -398,6 +398,85 @@ input:focus, select:focus, textarea:focus {
   margin-bottom: 18px;
 }
 
+/* Mobile responsive adjustments */
+@media (max-width: 1024px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    margin-bottom: 48px;
+  }
+
+  .site-header, .auth-header, .dashboard-header {
+    padding: 16px 20px;
+  }
+
+  main {
+    padding: 20px;
+  }
+
+  .feature-grid, .testimonial-grid, .pricing-grid, .stat-grid, .quick-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .auth-panel {
+    padding: 28px;
+    width: 100%;
+  }
+
+  input, select, textarea {
+    padding: 12px 14px;
+    border-radius: 12px;
+  }
+
+  .btn, .button {
+    padding: 12px 18px;
+  }
+}
+
+@media (max-width: 640px) {
+  :root { --radius: 16px; }
+
+  .site-header, .auth-header, .dashboard-header {
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .brand { font-size: 1.1rem; }
+
+  .site-nav, .dashboard-nav {
+    gap: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+  }
+
+  .hero-copy p { max-width: 100%; }
+
+  .hero-actions { flex-direction: column; align-items: stretch; }
+
+  .btn, .button { width: 100%; border-radius: 12px; }
+
+  .feature-grid, .testimonial-grid, .pricing-grid, .stat-grid, .quick-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-page { padding: 20px 12px; }
+
+  .auth-panel { padding: 18px; border-radius: 12px; }
+
+  .form-row { flex-direction: column; align-items: stretch; }
+
+  .toast { left: 16px; right: 16px; transform: none; width: auto; }
+
+  main { padding: 16px 12px; }
+}
+
+/* Accessibility: larger tap targets on touch devices */
+@media (pointer: coarse) {
+  .btn, .button, input, select, textarea, .site-nav a { touch-action: manipulation; }
+  .btn, .button { min-height: 44px; }
+}
+
 .card {
   background: #fff;
   border: 1px solid var(--border);
