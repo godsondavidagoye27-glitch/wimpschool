@@ -95,6 +95,13 @@ async function fetchUserRole(userId) {
       // Ignore "no rows" error - just return null data
       if (error.details !== 'Results contain 0 rows') {
         console.error('fetchUserRole error:', error);
+        // Show banner for permission/RLS errors
+        if (error.code === 'PGRST116' || error.status === 406 || error.status === 403) {
+          const msg = 'Supabase user_roles table is not accessible. Admin: disable RLS on user_roles in Supabase dashboard or run: ALTER TABLE user_roles DISABLE ROW LEVEL SECURITY;';
+          if (window.wimpSchoolRenderConfigError) {
+            window.wimpSchoolRenderConfigError(msg);
+          }
+        }
         return { error };
       }
     }
