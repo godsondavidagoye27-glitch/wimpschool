@@ -112,6 +112,26 @@
         </form>
         <p id="brandingStatus" class="form-note">Brand updates will be visible across dashboards and the parent portal once saved.</p>
       </article>
+
+      <article class="list-card">
+        <h2>Notifications & alerts</h2>
+        <p>Send a test notification through the configured delivery channel for your school.</p>
+        <form id="notificationSettingsForm">
+          <label>Delivery channel</label>
+          <select id="notificationChannel">
+            <option value="email">Email</option>
+            <option value="sms">SMS</option>
+          </select>
+          <label>Recipient</label>
+          <input type="text" id="notificationRecipient" placeholder="name@example.com or +234..." />
+          <label>Subject</label>
+          <input type="text" id="notificationSubject" placeholder="School update" />
+          <label>Message</label>
+          <textarea id="notificationMessage" rows="3" placeholder="A test notification from WimpSchool"></textarea>
+          <button type="submit" class="btn btn-primary">Send test alert</button>
+          <p id="notificationStatus" class="form-note"></p>
+        </form>
+      </article>
     </section>
   </main>
 
@@ -119,6 +139,7 @@
   <script src="js/config-checker.js"></script>
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/backend.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

@@ -608,6 +608,12 @@ async function attachAdminSettingsHandlers() {
   const feeStatusEl = document.getElementById('feeStatus');
   const brandingForm = document.getElementById('brandingForm');
   const brandingStatus = document.getElementById('brandingStatus');
+  const notificationForm = document.getElementById('notificationSettingsForm');
+  const notificationChannelEl = document.getElementById('notificationChannel');
+  const notificationRecipientEl = document.getElementById('notificationRecipient');
+  const notificationSubjectEl = document.getElementById('notificationSubject');
+  const notificationMessageEl = document.getElementById('notificationMessage');
+  const notificationStatus = document.getElementById('notificationStatus');
   const session = loadSession();
   const client = window.getSupabase ? window.getSupabase() : null;
 
@@ -853,6 +859,47 @@ async function attachAdminSettingsHandlers() {
     applySchoolBrandingPreview({ schoolName: school.name, primaryColor: updatedBranding.primary_color });
     if (brandingStatus) {
       brandingStatus.textContent = 'Branding settings saved successfully.';
+    }
+  });
+
+  notificationForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+
+    const channel = notificationChannelEl?.value;
+    const recipient = notificationRecipientEl?.value.trim();
+    const subject = notificationSubjectEl?.value.trim();
+    const message = notificationMessageEl?.value.trim();
+
+    if (!channel || !recipient || !message) {
+      if (notificationStatus) {
+        notificationStatus.textContent = 'Please choose a channel, provide a recipient, and enter a message.';
+      }
+      return;
+    }
+
+    if (notificationStatus) {
+      notificationStatus.textContent = 'Sending notification...';
+    }
+
+    const result = await sendSchoolNotification({
+      schoolId: session.schoolId,
+      type: 'test_alert',
+      message,
+      channel,
+      recipient,
+      subject: subject || `${channel.toUpperCase()} test notification`,
+      from: school.email || null
+    });
+
+    if (result.error) {
+      if (notificationStatus) {
+        notificationStatus.textContent = result.error.message || 'Unable to send notification.';
+      }
+      return;
+    }
+
+    if (notificationStatus) {
+      notificationStatus.textContent = `Notification sent via ${channel}.`;
     }
   });
 }
