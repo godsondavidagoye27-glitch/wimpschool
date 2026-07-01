@@ -128,8 +128,20 @@ async function ensureUserRole(userId, role = 'school_admin', schoolId = null) {
   if (!client) {
     return { error: { message: 'Supabase is not initialized. Cannot ensure user role.' } };
   }
-
+  // Prefer calling a server-side Edge Function to perform this insert with service role
   try {
+    if (client.functions && typeof client.functions.invoke === 'function') {
+      const res = await client.functions.invoke('ensure-user-role', {
+        body: JSON.stringify({ userId, role, schoolId })
+      });
+      if (res.error) {
+        console.warn('ensure-user-role function error:', res.error);
+        return { error: res.error };
+      }
+      return { data: res.data };
+    }
+
+    // Fallback to client-side insert if functions not available
     const { data: existing, error: selectError } = await client
       .from('user_roles')
       .select('id')
