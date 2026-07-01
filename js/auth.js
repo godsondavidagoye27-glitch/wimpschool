@@ -20,6 +20,15 @@ function getSupabaseLibrary() {
 }
 
 function initSupabaseClient() {
+  // Return existing client if already initialized
+  if (isSupabaseClient(window.supabaseClient)) {
+    return window.supabaseClient;
+  }
+  if (isSupabaseClient(window.supabase)) {
+    window.supabaseClient = window.supabase;
+    return window.supabaseClient;
+  }
+
   const SupabaseLib = getSupabaseLibrary();
   if (!SupabaseLib) {
     console.error('Supabase SDK not loaded. Make sure the CDN script tag comes before auth.js.');
@@ -50,6 +59,8 @@ function initSupabaseClient() {
   }
 
   window.supabaseClient = client;
+  // Also expose on window.supabase for older code
+  window.supabase = window.supabase || client;
   return client;
 }
 
@@ -126,6 +137,15 @@ async function signIn(email, password) {
 
     if (authError) {
       return { error: authError };
+    }
+
+    // Persist Supabase session into the client storage so auth.getSession() works
+    try {
+      if (authData?.session) {
+        await client.auth.setSession(authData.session);
+      }
+    } catch (setErr) {
+      console.warn('Unable to set Supabase session in client:', setErr);
     }
 
     if (!authData?.user) {

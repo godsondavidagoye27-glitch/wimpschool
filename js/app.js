@@ -12,6 +12,8 @@ function setTextContentById(id, text) {
 window.addEventListener('load', async () => {
   registerServiceWorker();
   listenInstallPrompt();
+  // Rehydrate session from Supabase if available before enforcing role
+  await rehydrateSessionFromSupabase();
   const allowed = await enforcePageRole();
   if (!allowed) {
     return;
@@ -71,6 +73,30 @@ function showMessage(message, type = 'info') {
 }
 
 window.showMessage = window.showMessage || showMessage;
+
+async function rehydrateSessionFromSupabase() {
+  try {
+    const client = window.getSupabase ? window.getSupabase() : null;
+    if (!client) return;
+
+    const sessionInfo = await client.auth.getSession();
+    const user = sessionInfo?.data?.session?.user;
+    if (!user) return;
+
+    const roleResult = await fetchUserRole(user.id);
+    const role = roleResult.data?.role || user.user_metadata?.role || 'school_admin';
+
+    saveSession({
+      userId: user.id,
+      email: user.email,
+      role,
+      schoolId: roleResult.data?.school_id || null,
+      remember: true
+    });
+  } catch (err) {
+    console.warn('rehydrateSessionFromSupabase error:', err);
+  }
+}
 
 function getRoleRedirect(role) {
   switch (role) {
