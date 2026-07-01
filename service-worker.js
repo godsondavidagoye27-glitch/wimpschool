@@ -53,6 +53,10 @@ self.addEventListener('fetch', event => {
   }
 
   const requestUrl = new URL(event.request.url);
+  // Only cache http/https schemes
+  if (!requestUrl.protocol.startsWith('http')) {
+    return;
+  }
   const isSameOrigin = requestUrl.origin === self.location.origin;
   const isAssetRequest = /\.(js|css|html|json|png|jpg|jpeg|svg|webmanifest)$/i.test(requestUrl.pathname);
 

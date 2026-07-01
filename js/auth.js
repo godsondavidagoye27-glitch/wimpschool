@@ -84,21 +84,26 @@ async function fetchUserRole(userId) {
     return { error: { message: 'Supabase is not initialized. Check your configuration and script order.' } };
   }
 
-  const { data, error } = await client
-    .from('user_roles')
-    .select('role, school_id')
-    .eq('user_id', userId)
-    .single();
+  try {
+    const { data, error } = await client
+      .from('user_roles')
+      .select('role, school_id')
+      .eq('user_id', userId)
+      .single();
 
-  if (error && error.details !== 'Results contain 0 rows') {
-    return { error };
+    if (error) {
+      // Ignore "no rows" error - just return null data
+      if (error.details !== 'Results contain 0 rows') {
+        console.error('fetchUserRole error:', error);
+        return { error };
+      }
+    }
+
+    return { data: data || null };
+  } catch (err) {
+    console.error('fetchUserRole exception:', err);
+    return { error: { message: err?.message || 'Failed to fetch user role.' } };
   }
-
-  if (!data) {
-    return { data: null };
-  }
-
-  return { data };
 }
 
 async function signIn(email, password) {
