@@ -1352,6 +1352,11 @@ if (document.getElementById('registerForm')) {
       subscriptionPlan: document.getElementById('subscriptionPlan').value
     };
 
+    if (!payload.schoolName || !payload.schoolCode || !payload.schoolAddress || !payload.schoolPhone || !payload.schoolEmail || !payload.adminName || !payload.adminEmail || !payload.adminPassword) {
+      return showMessage('Please complete all school and admin fields before registering.', 'error');
+    }
+
+    applySchoolBrandingPreview({ schoolName: payload.schoolName, primaryColor: '#e63a2e', schoolLogoUrl: payload.schoolLogoUrl });
     registerSchool(payload);
   });
 }
