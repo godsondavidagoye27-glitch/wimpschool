@@ -122,6 +122,31 @@
       </div>
     </section>
 
+    <section class="analytics-panel">
+      <div class="section-heading">
+        <span class="eyebrow">Performance pulse</span>
+        <h2>School health snapshot</h2>
+        <p>Attendance, fee recovery, and results are combined into a simple health view.</p>
+      </div>
+      <div class="insight-grid">
+        <article class="info-card">
+          <h3>Health score</h3>
+          <p id="healthScore" class="big-metric">—</p>
+          <div class="metric-row"><span>Attendance</span><strong id="healthAttendance">—</strong></div>
+          <div class="metric-row"><span>Fee recovery</span><strong id="healthRecovery">—</strong></div>
+          <div class="metric-row"><span>Average results</span><strong id="healthResults">—</strong></div>
+          <p id="healthInsight" class="section-copy">Loading school health insights…</p>
+        </article>
+        <div class="chart-card">
+          <div class="section-heading">
+            <h2>Payment mix</h2>
+            <p>Paid vs outstanding balances</p>
+          </div>
+          <canvas id="paymentMixChart" height="220"></canvas>
+        </div>
+      </div>
+    </section>
+
     <section id="attendance" class="announcements-panel">
       <div class="section-heading">
         <h2>Quick actions</h2>

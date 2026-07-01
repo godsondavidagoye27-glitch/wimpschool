@@ -420,6 +420,140 @@ async function renderEliteAnalytics() {
   }
 }
 
+async function fetchAnalyticsSnapshot() {
+  const client = window.getSupabase ? window.getSupabase() : null;
+  const schoolId = getSavedSchoolId();
+  if (!client || !schoolId) {
+    return {
+      attendanceRate: null,
+      paymentRecovery: 0,
+      averageScore: null,
+      resultsLogged: 0,
+      paidAmount: 0,
+      outstandingAmount: 0,
+      healthScore: 0,
+      insight: 'Add attendance, payment, and results data to unlock the full health overview.'
+    };
+  }
+
+  const [attendanceResult, paymentsResult, resultsResult] = await Promise.all([
+    client.from('attendance').select('status').eq('school_id', schoolId),
+    client.from('payments').select('amount, status').eq('school_id', schoolId),
+    client.from('results').select('score').eq('school_id', schoolId)
+  ]);
+
+  const attendanceRecords = attendanceResult.data || [];
+  const paymentRecords = paymentsResult.data || [];
+  const resultRecords = resultsResult.data || [];
+
+  const attendanceRate = attendanceRecords.length
+    ? Math.round((attendanceRecords.filter(item => item.status === 'present').length / attendanceRecords.length) * 100)
+    : null;
+
+  const paidAmount = paymentRecords.filter(item => item.status === 'paid').reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const outstandingAmount = paymentRecords.filter(item => item.status !== 'paid').reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const totalAmount = paidAmount + outstandingAmount;
+  const paymentRecovery = totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : 0;
+  const averageScore = resultRecords.length
+    ? Math.round(resultRecords.reduce((sum, item) => sum + Number(item.score || 0), 0) / resultRecords.length)
+    : null;
+
+  const healthScore = Math.max(0, Math.min(100, Math.round(((attendanceRate || 0) * 0.4) + (paymentRecovery * 0.4) + ((averageScore || 0) * 0.2))));
+
+  let insight = 'The school is on track with a steady rhythm.';
+  if (attendanceRate !== null && attendanceRate < 80) {
+    insight = 'Attendance is below target. A quick check-in with homeroom teachers could help.';
+  } else if (paymentRecovery < 70) {
+    insight = 'Fee recovery needs attention. Follow-up reminders could improve collections.';
+  } else if (averageScore !== null && averageScore >= 70) {
+    insight = 'The school is showing strong academic momentum and healthy collections.';
+  }
+
+  return {
+    attendanceRate,
+    paymentRecovery,
+    averageScore,
+    resultsLogged: resultRecords.length,
+    paidAmount,
+    outstandingAmount,
+    healthScore,
+    insight
+  };
+}
+
+async function renderHealthSnapshot() {
+  const healthScoreEl = document.getElementById('healthScore');
+  const healthAttendanceEl = document.getElementById('healthAttendance');
+  const healthRecoveryEl = document.getElementById('healthRecovery');
+  const healthResultsEl = document.getElementById('healthResults');
+  const healthInsightEl = document.getElementById('healthInsight');
+
+  if (!healthScoreEl && !healthAttendanceEl && !healthRecoveryEl && !healthResultsEl && !healthInsightEl) return;
+
+  const snapshot = await fetchAnalyticsSnapshot();
+
+  if (healthScoreEl) {
+    healthScoreEl.textContent = `${snapshot.healthScore}%`;
+  }
+  if (healthAttendanceEl) {
+    healthAttendanceEl.textContent = snapshot.attendanceRate === null ? 'No data' : `${snapshot.attendanceRate}%`;
+  }
+  if (healthRecoveryEl) {
+    healthRecoveryEl.textContent = snapshot.paymentRecovery ? `${snapshot.paymentRecovery}%` : 'No data';
+  }
+  if (healthResultsEl) {
+    healthResultsEl.textContent = snapshot.averageScore === null ? 'No data' : `${snapshot.averageScore}/100`;
+  }
+  if (healthInsightEl) {
+    healthInsightEl.textContent = snapshot.insight;
+  }
+}
+
+async function renderPaymentMixChart() {
+  const canvas = document.getElementById('paymentMixChart');
+  if (!canvas) return;
+
+  const snapshot = await fetchAnalyticsSnapshot();
+  const ctx = canvas.getContext('2d');
+  const hasData = snapshot.paidAmount > 0 || snapshot.outstandingAmount > 0;
+
+  if (!hasData) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const placeholder = new Image();
+    placeholder.src = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220"><rect width="100%" height="100%" rx="24" fill="#fbfbfb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#58607c" font-family="Inter, Arial" font-size="16">No payment data yet</text></svg>');
+    placeholder.onload = () => ctx.drawImage(placeholder, 0, 0, canvas.width, canvas.height);
+    return;
+  }
+
+  if (window.paymentMixChartInstance) {
+    window.paymentMixChartInstance.destroy();
+  }
+
+  window.paymentMixChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Paid', 'Outstanding'],
+      datasets: [{
+        data: [snapshot.paidAmount, snapshot.outstandingAmount],
+        backgroundColor: ['#e63a2e', '#1a1f5e'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#58607c' } },
+        tooltip: {
+          callbacks: {
+            label: item => `${item.label}: ${formatCurrencyShort(item.raw)}`
+          }
+        }
+      }
+    }
+  });
+}
+
 window.addEventListener('load', () => {
   fetchStudentCount();
   fetchTeacherCount();
@@ -427,6 +561,8 @@ window.addEventListener('load', () => {
   renderRecentPayments();
   renderFeeChart();
   renderEliteAnalytics();
+  renderHealthSnapshot();
+  renderPaymentMixChart();
   renderNotificationsWidget();
   document.getElementById('exportDashboardSummary')?.addEventListener('click', exportDashboardSummary);
 });

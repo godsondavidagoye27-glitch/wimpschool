@@ -205,7 +205,7 @@ main {
   max-width: 720px;
 }
 
-.feature-grid, .pricing-grid, .testimonial-grid, .stat-grid, .quick-grid {
+.feature-grid, .pricing-grid, .testimonial-grid, .stat-grid, .quick-grid, .insight-grid {
   display: grid;
   gap: 20px;
 }
@@ -228,6 +228,11 @@ main {
 
 .quick-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.insight-grid {
+  grid-template-columns: 1.1fr 1fr;
+  align-items: start;
 }
 
 .feature-card, .plan-card, .testimonial-card, .stat-card, .list-card, .notice-card, .quick-card, .payment-card, .chart-card, .info-card {
@@ -259,6 +264,32 @@ main {
 
 .plan-card h3, .feature-card h3, .stat-card h3, .list-card h2, .notice-card h3, .quick-card h4 {
   margin-top: 0;
+}
+
+.stat-card:hover, .quick-card:hover, .chart-card:hover, .info-card:hover {
+  border-color: rgba(230,58,46,.24);
+  box-shadow: 0 16px 40px rgba(26,31,94,0.06);
+  transform: translateY(-2px);
+}
+
+.big-metric {
+  font-size: 2.3rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 8px 0 16px;
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(26,31,94,0.08);
+  color: var(--muted);
+}
+
+.metric-row:last-of-type {
+  border-bottom: none;
 }
 
 .plan-price {
@@ -894,6 +925,12 @@ input:focus, select:focus, textarea:focus {
   .site-header, .auth-header, .dashboard-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 900px) {
+  .insight-grid {
+    grid-template-columns: 1fr;
   }
 }
 
