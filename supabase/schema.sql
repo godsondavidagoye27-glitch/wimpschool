@@ -6,6 +6,8 @@ create table if not exists schools (
   address text,
   school_code text unique not null,
   subscription_plan text,
+  pending_subscription_plan text,
+  subscription_change_effective_date timestamptz,
   admin_id uuid references auth.users(id),
   verified boolean default false,
   created_at timestamptz default timezone('utc', now())

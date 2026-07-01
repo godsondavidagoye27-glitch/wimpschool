@@ -219,6 +219,8 @@ async function loadPageScripts() {
       return loadAttendancePage();
     case 'parent-portal':
       return attachParentPortalHandlers();
+    case 'admin-settings':
+      return attachAdminSettingsHandlers();
     default:
       return;
   }
@@ -232,7 +234,8 @@ async function loadSchoolAdminDashboard() {
   const client = window.getSupabase ? window.getSupabase() : null;
   if (!client) return;
 
-  const [studentsResult, teachersResult, paymentsResult, announcementsResult] = await Promise.all([
+  const [schoolResult, studentsResult, teachersResult, paymentsResult, announcementsResult] = await Promise.all([
+    client.from('schools').select('subscription_plan, pending_subscription_plan, subscription_change_effective_date, next_billing_date').eq('id', schoolId).single(),
     client.from('students').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
     client.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
     client.from('payments').select('amount, status').eq('school_id', schoolId),
@@ -244,11 +247,17 @@ async function loadSchoolAdminDashboard() {
   const payments = paymentsResult.data || [];
   const feesCollected = payments.filter(p => p.status === 'paid').reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const outstandingFees = payments.filter(p => p.status !== 'paid').reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const schoolPlan = schoolResult?.data || null;
+  const currentPlan = schoolPlan?.subscription_plan || 'Starter';
+  const pendingPlan = schoolPlan?.pending_subscription_plan || null;
+  const effectiveDate = schoolPlan?.next_billing_date ? new Date(schoolPlan.next_billing_date).toLocaleDateString() : (schoolPlan?.subscription_change_effective_date ? new Date(schoolPlan.subscription_change_effective_date).toLocaleDateString() : null);
 
   setTextContentById('totalStudents', totalStudents);
   setTextContentById('totalTeachers', totalTeachers);
   setTextContentById('feesCollected', formatCurrency(feesCollected));
   setTextContentById('outstandingFees', formatCurrency(outstandingFees));
+  setTextContentById('currentPlan', currentPlan);
+  setTextContentById('planUpgradeStatus', pendingPlan ? `Upgrade scheduled to ${pendingPlan} on ${effectiveDate || 'next billing date'}.` : 'No pending plan changes.');
 
   const announcementsContainer = document.getElementById('parentNotices');
   if (announcementsContainer && announcementsResult.data) {
@@ -539,6 +548,105 @@ async function attachTeacherManagementHandlers() {
   });
 
   await loadTeacherList();
+}
+
+async function attachAdminSettingsHandlers() {
+  const form = document.getElementById('planUpgradeForm');
+  const currentPlanEl = document.getElementById('settingsCurrentPlan');
+  const pendingPlanEl = document.getElementById('settingsPendingPlan');
+  const effectiveDateEl = document.getElementById('settingsPlanEffectiveDate');
+  const statusEl = document.getElementById('planUpgradeStatus');
+  const session = loadSession();
+  const client = window.getSupabase ? window.getSupabase() : null;
+
+  if (!session?.schoolId || !client) {
+    if (statusEl) {
+      statusEl.textContent = 'Unable to load plan settings. Please sign in again.';
+    }
+    return;
+  }
+
+  const { data: school, error } = await client
+    .from('schools')
+    .select('subscription_plan, pending_subscription_plan, subscription_change_effective_date, next_billing_date')
+    .eq('id', session.schoolId)
+    .single();
+
+  if (!school || error) {
+    if (statusEl) {
+      statusEl.textContent = 'Unable to retrieve your school plan details.';
+    }
+    return;
+  }
+
+  if (currentPlanEl) {
+    currentPlanEl.textContent = school.subscription_plan || 'Starter';
+  }
+  if (pendingPlanEl) {
+    pendingPlanEl.textContent = school.pending_subscription_plan || 'None';
+  }
+  if (effectiveDateEl) {
+    effectiveDateEl.textContent = school.subscription_change_effective_date
+      ? new Date(school.subscription_change_effective_date).toLocaleDateString()
+      : 'N/A';
+  }
+
+  form?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const selectedPlan = document.getElementById('upgradePlan')?.value;
+    if (!selectedPlan) {
+      if (statusEl) {
+        statusEl.textContent = 'Please choose a plan to upgrade to.';
+      }
+      return;
+    }
+
+    const existingPlan = school.subscription_plan || 'Starter';
+    if (selectedPlan === existingPlan) {
+      if (statusEl) {
+        statusEl.textContent = 'You are already on this plan.';
+      }
+      return;
+    }
+
+    const nextBillingDate = school.next_billing_date
+      ? new Date(school.next_billing_date)
+      : new Date();
+
+    if (!school.next_billing_date) {
+      nextBillingDate.setDate(nextBillingDate.getDate() + 30);
+    }
+
+    const { data: updated, error: updateError } = await client
+      .from('schools')
+      .update({
+        pending_subscription_plan: selectedPlan,
+        subscription_change_effective_date: nextBillingDate.toISOString()
+      })
+      .eq('id', session.schoolId)
+      .select('subscription_plan, pending_subscription_plan, subscription_change_effective_date')
+      .single();
+
+    if (updateError || !updated) {
+      if (statusEl) {
+        statusEl.textContent = 'Unable to schedule the plan upgrade. Try again later.';
+      }
+      return;
+    }
+
+    if (currentPlanEl) {
+      currentPlanEl.textContent = updated.subscription_plan || 'Starter';
+    }
+    if (pendingPlanEl) {
+      pendingPlanEl.textContent = updated.pending_subscription_plan || 'None';
+    }
+    if (effectiveDateEl) {
+      effectiveDateEl.textContent = new Date(updated.subscription_change_effective_date).toLocaleDateString();
+    }
+    if (statusEl) {
+      statusEl.textContent = `Upgrade scheduled to ${selectedPlan} starting ${new Date(updated.subscription_change_effective_date).toLocaleDateString()}.`;
+    }
+  });
 }
 
 async function attachAnnouncementHandlers() {
@@ -935,8 +1043,8 @@ async function enforcePageRole() {
 
   const currentRole = roleResult.data.role || sessionInfo.data.session.user.user_metadata?.role;
   if (currentRole !== requiredRole) {
-    showMessage('Access denied. Please sign in with the correct account.', 'error');
-    window.location.href = 'login.html';
+    showMessage('Access denied. Redirecting to your correct portal.', 'error');
+    window.location.href = getRoleRedirect(currentRole);
     return false;
   }
 

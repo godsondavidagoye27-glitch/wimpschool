@@ -13,7 +13,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#e63a2e" />
 </head>
-<body data-required-role="school_admin" class="hide-until-auth">
+<body data-required-role="school_admin" data-page="admin-settings" class="hide-until-auth">
   <header class="dashboard-header">
     <div class="brand">WimpSchool</div>
     <nav class="dashboard-nav">
@@ -43,6 +43,27 @@
       <article class="list-card">
         <h2>Fee & grading rules</h2>
         <p>Adjust fee plans, grading criteria, student ID settings and subscription management.</p>
+      </article>
+      <article class="list-card">
+        <h2>Subscription upgrade</h2>
+        <p>Choose a higher plan and schedule it to start on your next billing date.</p>
+        <form id="planUpgradeForm">
+          <label>Current plan</label>
+          <p><strong id="settingsCurrentPlan">—</strong></p>
+          <label>Pending upgrade</label>
+          <p><strong id="settingsPendingPlan">—</strong></p>
+          <label>Next billing date</label>
+          <p><strong id="settingsPlanEffectiveDate">—</strong></p>
+          <label>Upgrade to</label>
+          <select id="upgradePlan">
+            <option value="">Select a plan</option>
+            <option value="Starter">Starter</option>
+            <option value="Growth">Growth</option>
+            <option value="Elite">Elite</option>
+          </select>
+          <button type="submit" class="btn btn-primary">Schedule upgrade</button>
+        </form>
+        <p id="planUpgradeStatus" class="form-note"></p>
       </article>
     </section>
   </main>

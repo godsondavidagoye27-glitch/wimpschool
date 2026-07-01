@@ -253,6 +253,9 @@ async function signUpSchoolAdmin(payload) {
       return { error: { message: 'Unable to create the school administrator account.' } };
     }
 
+    const nextBillingDate = new Date();
+    nextBillingDate.setDate(nextBillingDate.getDate() + 30);
+
     const { data: schoolData, error: schoolError } = await client
       .from('schools')
       .insert([
@@ -261,6 +264,7 @@ async function signUpSchoolAdmin(payload) {
           address: payload.schoolAddress,
           school_code: payload.schoolCode,
           subscription_plan: payload.subscriptionPlan,
+          next_billing_date: nextBillingDate.toISOString(),
           admin_id: userId,
           verified: false
         }
