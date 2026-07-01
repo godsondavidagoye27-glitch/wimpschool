@@ -38,11 +38,38 @@
     <section class="cards-row" id="settings">
       <article class="list-card">
         <h2>School profile</h2>
-        <p>Change school name, address, logo and academic session information.</p>
+        <p>Update school identity, contact details, and portal display name.</p>
+        <form id="profileSettingsForm">
+          <label>School name</label>
+          <input type="text" id="settingsSchoolName" placeholder="School name" />
+          <label>School code</label>
+          <input type="text" id="settingsSchoolCode" placeholder="School code" readonly />
+          <label>School address</label>
+          <input type="text" id="settingsSchoolAddress" placeholder="School address" />
+          <label>School email</label>
+          <input type="email" id="settingsSchoolEmail" placeholder="admin@school.com" />
+          <label>School phone</label>
+          <input type="tel" id="settingsSchoolPhone" placeholder="+234 800 000 0000" />
+          <button type="submit" class="btn btn-primary">Save profile</button>
+          <p id="profileStatus" class="form-note"></p>
+        </form>
       </article>
       <article class="list-card">
         <h2>Fee & grading rules</h2>
-        <p>Adjust fee plans, grading criteria, student ID settings and subscription management.</p>
+        <p>Set default tuition and grading scale for school operations.</p>
+        <form id="feeSettingsForm">
+          <label>Default tuition</label>
+          <input type="number" id="settingsDefaultTuition" step="100" placeholder="20000" />
+          <label>Grading scale</label>
+          <select id="settingsGradingScale">
+            <option value="">Select scale</option>
+            <option value="A-F">A-F</option>
+            <option value="1-5">1-5</option>
+            <option value="Percentage">Percentage</option>
+          </select>
+          <button type="submit" class="btn btn-secondary small">Save fee settings</button>
+          <p id="feeStatus" class="form-note"></p>
+        </form>
       </article>
       <article class="list-card">
         <h2>Subscription upgrade</h2>
@@ -64,6 +91,18 @@
           <button type="submit" class="btn btn-primary">Schedule upgrade</button>
         </form>
         <p id="planUpgradeStatus" class="form-note"></p>
+      </article>
+      <article class="list-card">
+        <h2>Branding & portal theme</h2>
+        <p>Customize your school logo and brand palette for the parent portal.</p>
+        <form id="brandingForm">
+          <label>School logo URL</label>
+          <input type="url" id="brandingLogoUrl" placeholder="https://example.com/logo.png" />
+          <label>Primary portal color</label>
+          <input type="color" id="brandingPrimaryColor" value="#e63a2e" />
+          <button type="submit" id="saveBrandingButton" class="btn btn-secondary small">Save branding preview</button>
+        </form>
+        <p id="brandingStatus" class="form-note">Brand updates will be visible across dashboards and the parent portal once saved.</p>
       </article>
     </section>
   </main>

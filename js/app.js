@@ -9,6 +9,16 @@ function setTextContentById(id, text) {
   }
 }
 
+function applySchoolBrandingPreview({ schoolName, primaryColor }) {
+  const brandEl = document.querySelector('.brand');
+  if (brandEl && schoolName) {
+    brandEl.textContent = schoolName;
+  }
+  if (primaryColor) {
+    document.documentElement.style.setProperty('--accent', primaryColor);
+  }
+}
+
 window.addEventListener('load', async () => {
   registerServiceWorker();
   listenInstallPrompt();
@@ -551,30 +561,46 @@ async function attachTeacherManagementHandlers() {
 }
 
 async function attachAdminSettingsHandlers() {
-  const form = document.getElementById('planUpgradeForm');
+  const planForm = document.getElementById('planUpgradeForm');
   const currentPlanEl = document.getElementById('settingsCurrentPlan');
   const pendingPlanEl = document.getElementById('settingsPendingPlan');
   const effectiveDateEl = document.getElementById('settingsPlanEffectiveDate');
-  const statusEl = document.getElementById('planUpgradeStatus');
+  const planStatusEl = document.getElementById('planUpgradeStatus');
+  const profileForm = document.getElementById('profileSettingsForm');
+  const feeForm = document.getElementById('feeSettingsForm');
+  const profileStatusEl = document.getElementById('profileStatus');
+  const feeStatusEl = document.getElementById('feeStatus');
+  const brandingForm = document.getElementById('brandingForm');
+  const brandingStatus = document.getElementById('brandingStatus');
   const session = loadSession();
   const client = window.getSupabase ? window.getSupabase() : null;
 
   if (!session?.schoolId || !client) {
-    if (statusEl) {
-      statusEl.textContent = 'Unable to load plan settings. Please sign in again.';
+    if (planStatusEl) {
+      planStatusEl.textContent = 'Unable to load settings. Please sign in again.';
     }
     return;
   }
 
+  const profileNameEl = document.getElementById('settingsSchoolName');
+  const profileCodeEl = document.getElementById('settingsSchoolCode');
+  const profileAddressEl = document.getElementById('settingsSchoolAddress');
+  const profileEmailEl = document.getElementById('settingsSchoolEmail');
+  const profilePhoneEl = document.getElementById('settingsSchoolPhone');
+  const profileLogoEl = document.getElementById('brandingLogoUrl');
+  const profileColorEl = document.getElementById('brandingPrimaryColor');
+  const feeTuitionEl = document.getElementById('settingsDefaultTuition');
+  const feeScaleEl = document.getElementById('settingsGradingScale');
+
   const { data: school, error } = await client
     .from('schools')
-    .select('subscription_plan, pending_subscription_plan, subscription_change_effective_date, next_billing_date')
+    .select('subscription_plan, pending_subscription_plan, subscription_change_effective_date, next_billing_date, name, address, email, phone, logo_url, primary_color, default_tuition, grading_scale, school_code')
     .eq('id', session.schoolId)
     .single();
 
   if (!school || error) {
-    if (statusEl) {
-      statusEl.textContent = 'Unable to retrieve your school plan details.';
+    if (planStatusEl) {
+      planStatusEl.textContent = 'Unable to retrieve your school settings.';
     }
     return;
   }
@@ -591,20 +617,50 @@ async function attachAdminSettingsHandlers() {
       : 'N/A';
   }
 
-  form?.addEventListener('submit', async event => {
+  if (profileNameEl) {
+    profileNameEl.value = school.name || '';
+  }
+  if (profileCodeEl) {
+    profileCodeEl.value = school.school_code || '';
+  }
+  if (profileAddressEl) {
+    profileAddressEl.value = school.address || '';
+  }
+  if (profileEmailEl) {
+    profileEmailEl.value = school.email || '';
+  }
+  if (profilePhoneEl) {
+    profilePhoneEl.value = school.phone || '';
+  }
+  if (profileLogoEl) {
+    profileLogoEl.value = school.logo_url || '';
+  }
+  if (profileColorEl) {
+    profileColorEl.value = school.primary_color || '#e63a2e';
+  }
+  if (feeTuitionEl) {
+    feeTuitionEl.value = school.default_tuition || '';
+  }
+  if (feeScaleEl) {
+    feeScaleEl.value = school.grading_scale || '';
+  }
+
+  applySchoolBrandingPreview({ schoolName: school.name, primaryColor: school.primary_color });
+
+  planForm?.addEventListener('submit', async event => {
     event.preventDefault();
     const selectedPlan = document.getElementById('upgradePlan')?.value;
     if (!selectedPlan) {
-      if (statusEl) {
-        statusEl.textContent = 'Please choose a plan to upgrade to.';
+      if (planStatusEl) {
+        planStatusEl.textContent = 'Please choose a plan to upgrade to.';
       }
       return;
     }
 
     const existingPlan = school.subscription_plan || 'Starter';
     if (selectedPlan === existingPlan) {
-      if (statusEl) {
-        statusEl.textContent = 'You are already on this plan.';
+      if (planStatusEl) {
+        planStatusEl.textContent = 'You are already on this plan.';
       }
       return;
     }
@@ -628,8 +684,8 @@ async function attachAdminSettingsHandlers() {
       .single();
 
     if (updateError || !updated) {
-      if (statusEl) {
-        statusEl.textContent = 'Unable to schedule the plan upgrade. Try again later.';
+      if (planStatusEl) {
+        planStatusEl.textContent = 'Unable to schedule the plan upgrade. Try again later.';
       }
       return;
     }
@@ -643,11 +699,122 @@ async function attachAdminSettingsHandlers() {
     if (effectiveDateEl) {
       effectiveDateEl.textContent = new Date(updated.subscription_change_effective_date).toLocaleDateString();
     }
-    if (statusEl) {
-      statusEl.textContent = `Upgrade scheduled to ${selectedPlan} starting ${new Date(updated.subscription_change_effective_date).toLocaleDateString()}.`;
+    if (planStatusEl) {
+      planStatusEl.textContent = `Upgrade scheduled to ${selectedPlan} starting ${new Date(updated.subscription_change_effective_date).toLocaleDateString()}.`;
+    }
+  });
+
+  profileForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+
+    const name = profileNameEl?.value.trim();
+    const address = profileAddressEl?.value.trim();
+    const email = profileEmailEl?.value.trim();
+    const phone = profilePhoneEl?.value.trim();
+
+    if (!name) {
+      if (profileStatusEl) {
+        profileStatusEl.textContent = 'School name is required.';
+      }
+      return;
+    }
+
+    if (profileStatusEl) {
+      profileStatusEl.textContent = 'Saving profile settings...';
+    }
+
+    const { data: updatedProfile, error: profileError } = await client
+      .from('schools')
+      .update({
+        name,
+        address: address || null,
+        email: email || null,
+        phone: phone || null
+      })
+      .eq('id', session.schoolId)
+      .select('name, address, email, phone')
+      .single();
+
+    if (profileError || !updatedProfile) {
+      if (profileStatusEl) {
+        profileStatusEl.textContent = 'Unable to save profile settings. Try again later.';
+      }
+      return;
+    }
+
+    if (profileStatusEl) {
+      profileStatusEl.textContent = 'Profile settings saved successfully.';
+    }
+  });
+
+  feeForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+
+    const defaultTuition = Number(feeTuitionEl?.value || 0);
+    const gradingScale = feeScaleEl?.value || null;
+
+    if (feeStatusEl) {
+      feeStatusEl.textContent = 'Saving fee settings...';
+    }
+
+    const payload = {
+      default_tuition: Number.isFinite(defaultTuition) && defaultTuition > 0 ? defaultTuition : null,
+      grading_scale: gradingScale || null
+    };
+
+    const { data: updatedFee, error: feeError } = await client
+      .from('schools')
+      .update(payload)
+      .eq('id', session.schoolId)
+      .select('default_tuition, grading_scale')
+      .single();
+
+    if (feeError || !updatedFee) {
+      if (feeStatusEl) {
+        feeStatusEl.textContent = 'Unable to save fee settings. Try again later.';
+      }
+      return;
+    }
+
+    if (feeStatusEl) {
+      feeStatusEl.textContent = 'Fee settings saved successfully.';
+    }
+  });
+
+  brandingForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+
+    const logoUrl = profileLogoEl?.value.trim();
+    const primaryColor = profileColorEl?.value;
+
+    if (brandingStatus) {
+      brandingStatus.textContent = 'Saving branding settings...';
+    }
+
+    const { data: updatedBranding, error: brandingError } = await client
+      .from('schools')
+      .update({
+        logo_url: logoUrl || null,
+        primary_color: primaryColor || '#e63a2e'
+      })
+      .eq('id', session.schoolId)
+      .select('logo_url, primary_color')
+      .single();
+
+    if (brandingError || !updatedBranding) {
+      if (brandingStatus) {
+        brandingStatus.textContent = 'Unable to save branding settings. Try again later.';
+      }
+      return;
+    }
+
+    applySchoolBrandingPreview({ schoolName: school.name, primaryColor: updatedBranding.primary_color });
+    if (brandingStatus) {
+      brandingStatus.textContent = 'Branding settings saved successfully.';
     }
   });
 }
+
 
 async function attachAnnouncementHandlers() {
   const form = document.getElementById('announcementForm');
@@ -1089,6 +1256,7 @@ if (document.getElementById('registerForm')) {
       schoolAddress: document.getElementById('schoolAddress').value.trim(),
       schoolPhone: document.getElementById('schoolPhone').value.trim(),
       schoolEmail: document.getElementById('schoolEmail').value.trim(),
+      schoolLogoUrl: document.getElementById('schoolLogoUrl')?.value.trim(),
       adminName: document.getElementById('adminName').value.trim(),
       adminEmail: document.getElementById('adminEmail').value.trim(),
       adminPassword: document.getElementById('adminPassword').value,

@@ -202,7 +202,7 @@ async function fetchFeesCollectedToday() {
     .from('payments')
     .select('amount')
     .eq('school_id', schoolId)
-    .eq('status', 'success')
+    .eq('status', 'paid')
     .gte('created_at', today.toISOString())
     .lt('created_at', tomorrow.toISOString());
 
@@ -216,37 +216,102 @@ async function fetchFeesCollectedToday() {
 }
 
 async function fetchOutstandingFees() {
-  const element = document.getElementById('outstandingFees');
-  if (!element) return;
-
   const client = window.getSupabase ? window.getSupabase() : null;
   const schoolId = getSavedSchoolId();
-  
   if (!client || !schoolId) {
-    element.textContent = '₦0';
-    return;
+    return 0;
   }
 
   const { data, error } = await client
     .from('payments')
     .select('amount')
     .eq('school_id', schoolId)
-    .neq('status', 'success');
+    .neq('status', 'paid');
 
   if (error || !data?.length) {
-    element.textContent = '₦0';
-    return;
+    return 0;
   }
 
-  const total = data.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-  element.textContent = formatCurrencyShort(total);
+  return data.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+}
+
+async function fetchEliteAttendanceRate() {
+  const client = window.getSupabase ? window.getSupabase() : null;
+  const schoolId = getSavedSchoolId();
+  if (!client || !schoolId) return null;
+
+  const { data, error } = await client
+    .from('attendance')
+    .select('status')
+    .eq('school_id', schoolId);
+
+  if (error || !data?.length) return null;
+
+  const total = data.length;
+  const present = data.filter(record => record.status === 'present').length;
+  return total ? Math.round((present / total) * 100) : null;
+}
+
+async function fetchEliteAverageScore() {
+  const client = window.getSupabase ? window.getSupabase() : null;
+  const schoolId = getSavedSchoolId();
+  if (!client || !schoolId) return null;
+
+  const { data, error } = await client
+    .from('results')
+    .select('score')
+    .eq('school_id', schoolId);
+
+  if (error || !data?.length) return null;
+
+  const scores = data.map(item => Number(item.score || 0)).filter(Number.isFinite);
+  if (!scores.length) return null;
+  return Math.round(scores.reduce((sum, value) => sum + value, 0) / scores.length);
+}
+
+async function renderEliteAnalytics() {
+  const attendanceEl = document.getElementById('eliteAttendanceRate');
+  const recoveryEl = document.getElementById('eliteFeeRecovery');
+  const scoreEl = document.getElementById('eliteAverageScore');
+
+  const [attendanceRate, outstandingFees] = await Promise.all([
+    fetchEliteAttendanceRate(),
+    fetchOutstandingFees()
+  ]);
+
+  const paidTotal = await (async () => {
+    const client = window.getSupabase ? window.getSupabase() : null;
+    const schoolId = getSavedSchoolId();
+    if (!client || !schoolId) return 0;
+
+    const { data, error } = await client
+      .from('payments')
+      .select('amount')
+      .eq('school_id', schoolId)
+      .eq('status', 'paid');
+
+    if (error || !data?.length) return 0;
+    return data.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  })();
+
+  if (attendanceEl) {
+    attendanceEl.textContent = attendanceRate === null ? 'No attendance data' : `${attendanceRate}%`;
+  }
+  if (recoveryEl) {
+    const total = outstandingFees + paidTotal;
+    recoveryEl.textContent = total > 0 ? `${Math.round(((paidTotal / total) * 100) || 0)}%` : 'No payment data';
+  }
+  if (scoreEl) {
+    const averageScore = await fetchEliteAverageScore();
+    scoreEl.textContent = averageScore === null ? 'No results data' : `${averageScore}/100`;
+  }
 }
 
 window.addEventListener('load', () => {
   fetchStudentCount();
   fetchTeacherCount();
   fetchFeesCollectedToday();
-  fetchOutstandingFees();
   renderRecentPayments();
   renderFeeChart();
+  renderEliteAnalytics();
 });
