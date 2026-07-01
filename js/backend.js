@@ -182,6 +182,14 @@ async function inviteParent(payload) {
     return { error };
   }
 
+  if (payload.studentId) {
+    await supabase.from('parent_student_links').insert([{
+      parent_id: data.id,
+      student_id: payload.studentId,
+      relation: 'parent'
+    }]);
+  }
+
   await sendSchoolNotification({
     schoolId: payload.schoolId,
     type: 'invite',
@@ -246,6 +254,9 @@ async function recordPayment(payload) {
       amount: payload.amount,
       status: payload.status,
       method: payload.method,
+      payment_type: payload.paymentType || 'school_fee',
+      description: payload.description || 'School fee payment',
+      metadata: payload.metadata || {},
       tx_ref: payload.txRef,
       processed_at: new Date().toISOString()
     }

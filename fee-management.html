@@ -37,8 +37,14 @@
 
     <section class="cards-row" id="fees">
       <article class="list-card">
-        <h2>Installment setup</h2>
-        <p>Set fee amounts per class and term, with deadlines and status tracking.</p>
+        <h2>Class fee setup</h2>
+        <p>Set fee amounts per class in a simple JSON mapping. Parents will see this instantly in their portal.</p>
+        <form id="classFeeForm">
+          <label>Class fee mapping</label>
+          <textarea id="classFeeConfig" rows="8" placeholder='{"Nursery 1": 15000, "JSS1": 25000, "SS1": 30000}'></textarea>
+          <button type="submit" class="btn btn-primary">Save class fees</button>
+          <p id="classFeeStatus" class="form-note">Use a JSON object with class names as keys and fee amounts as values.</p>
+        </form>
       </article>
       <article class="list-card">
         <h2>Payment history</h2>

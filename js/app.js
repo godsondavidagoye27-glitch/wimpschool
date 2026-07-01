@@ -272,6 +272,29 @@ async function loadPageScripts() {
   }
 }
 
+function parseFeeMapping(rawValue) {
+  if (!rawValue) return {};
+  if (typeof rawValue === 'object' && !Array.isArray(rawValue)) {
+    return rawValue;
+  }
+
+  try {
+    const parsed = typeof rawValue === 'string' ? JSON.parse(rawValue) : rawValue;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch (err) {
+    return {};
+  }
+}
+
+function formatFeeBreakdown(feeMap) {
+  const entries = Object.entries(feeMap || {}).filter(([, value]) => Number(value) > 0);
+  if (!entries.length) {
+    return '<p>No class fees configured yet.</p>';
+  }
+
+  return `<ul>${entries.map(([className, amount]) => `<li><strong>${className}</strong>: ${formatCurrency(Number(amount || 0))}</li>`).join('')}</ul>`;
+}
+
 async function loadSchoolAdminDashboard() {
   const session = loadSession();
   const schoolId = session?.schoolId;
@@ -356,8 +379,11 @@ async function loadParentPortal() {
   if (!client) return;
 
   const { userId, schoolId } = session;
-  const { data: parentData } = await client.from('parents').select('id, name, student_id, phone').eq('user_id', userId).single();
-  const studentId = session.studentId || parentData?.student_id;
+  const { data: parentData } = await client.from('parents').select('id, name, student_id, phone').eq('user_id', userId).maybeSingle();
+  const baseStudentId = session.studentId || parentData?.student_id;
+  const { data: links } = await client.from('parent_student_links').select('student_id').eq('parent_id', parentData?.id);
+  const linkedStudentIds = [...new Set([baseStudentId, ...(links || []).map(link => link.student_id)].filter(Boolean))];
+  const studentId = linkedStudentIds[0] || baseStudentId || null;
 
   const paymentsQuery = client.from('payments').select('amount, status').limit(20);
   if (parentData?.id && studentId) {
@@ -375,7 +401,7 @@ async function loadParentPortal() {
     : Promise.resolve({ data: [] });
 
   const [studentResult, paymentsResult, attendanceResult, announcementsResult] = await Promise.all([
-    client.from('students').select('id, name, student_code, class_name').eq('id', studentId).single(),
+    studentId ? client.from('students').select('id, name, student_code, class_name').eq('id', studentId).maybeSingle() : Promise.resolve({ data: null }),
     paymentsQuery,
     attendancePromise,
     client.from('announcements').select('title, body, created_at').eq('school_id', schoolId).order('created_at', { ascending: false }).limit(3)
@@ -407,7 +433,63 @@ async function loadParentPortal() {
     payButton.dataset.parentId = parentData?.id || '';
     payButton.dataset.schoolId = schoolId || '';
   }
+
+  const childSelector = document.getElementById('childSelector');
+  const feeBreakdownEl = document.getElementById('childFeeBreakdown');
+  if (childSelector) {
+    const { data: studentRows } = await client.from('students').select('id, name, class_name').in('id', linkedStudentIds);
+    if (studentRows?.length) {
+      childSelector.innerHTML = studentRows.map(studentRow => `<option value="${studentRow.id}" ${String(studentRow.id) === String(studentId) ? 'selected' : ''}>${studentRow.name} (${studentRow.class_name || 'Class'})</option>`).join('');
+      childSelector.disabled = false;
+    } else if (student) {
+      childSelector.innerHTML = `<option value="${student.id}">${student.name} (${student.class_name || 'Class'})</option>`;
+      childSelector.disabled = false;
+    } else {
+      childSelector.innerHTML = '<option value="">No child linked</option>';
+      childSelector.disabled = true;
+    }
+  }
+
+  if (feeBreakdownEl) {
+    const { data: schoolData } = await client.from('schools').select('fee_structure, default_tuition').eq('id', schoolId).maybeSingle();
+    const feeMap = parseFeeMapping(schoolData?.fee_structure || {});
+    const feeAmount = Number(feeMap?.[student?.class_name] || schoolData?.default_tuition || 0);
+    feeBreakdownEl.innerHTML = `<p><strong>${student?.name || 'Selected child'}</strong></p><p>${student?.class_name || 'Class'} fee: ${formatCurrency(feeAmount)}</p>`;
+  }
+
+  if (!window.wimpSchoolParentPortalChannel) {
+    const realtimeChannel = client.channel(`parent-payments-${session.userId}`);
+    realtimeChannel.on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'payments',
+      filter: `school_id=eq.${schoolId}`
+    }, async () => {
+      if (document.visibilityState === 'hidden') return;
+      await loadParentPortal();
+    });
+    realtimeChannel.subscribe();
+    window.wimpSchoolParentPortalChannel = realtimeChannel;
+  }
+
+  if (window.wimpSchoolParentPortalRefreshTimer) {
+    clearInterval(window.wimpSchoolParentPortalRefreshTimer);
+  }
+  window.wimpSchoolParentPortalRefreshTimer = window.setInterval(() => {
+    if (document.visibilityState === 'hidden') return;
+    void loadParentPortal();
+  }, 10000);
 }
+
+window.refreshParentPortalData = loadParentPortal;
+window.addEventListener('beforeunload', () => {
+  if (window.wimpSchoolParentPortalRefreshTimer) {
+    clearInterval(window.wimpSchoolParentPortalRefreshTimer);
+  }
+  if (window.wimpSchoolParentPortalChannel) {
+    window.getSupabase?.().removeChannel(window.wimpSchoolParentPortalChannel);
+  }
+});
 
 async function loadAttendancePage() {
   const session = loadSession();
@@ -632,11 +714,12 @@ async function attachAdminSettingsHandlers() {
   const profileLogoEl = document.getElementById('brandingLogoUrl');
   const profileColorEl = document.getElementById('brandingPrimaryColor');
   const feeTuitionEl = document.getElementById('settingsDefaultTuition');
+  const feeMapEl = document.getElementById('settingsClassFeeMap');
   const feeScaleEl = document.getElementById('settingsGradingScale');
 
   const { data: school, error } = await client
     .from('schools')
-    .select('subscription_plan, pending_subscription_plan, subscription_change_effective_date, next_billing_date, name, address, email, phone, logo_url, primary_color, default_tuition, grading_scale, school_code')
+    .select('subscription_plan, pending_subscription_plan, subscription_change_effective_date, next_billing_date, name, address, email, phone, logo_url, primary_color, default_tuition, fee_structure, grading_scale, school_code')
     .eq('id', session.schoolId)
     .single();
 
@@ -682,6 +765,9 @@ async function attachAdminSettingsHandlers() {
   }
   if (feeTuitionEl) {
     feeTuitionEl.value = school.default_tuition || '';
+  }
+  if (feeMapEl) {
+    feeMapEl.value = JSON.stringify(school.fee_structure || {}, null, 2);
   }
   if (feeScaleEl) {
     feeScaleEl.value = school.grading_scale || '';
@@ -799,6 +885,7 @@ async function attachAdminSettingsHandlers() {
     event.preventDefault();
 
     const defaultTuition = Number(feeTuitionEl?.value || 0);
+    const feeMapping = parseFeeMapping(feeMapEl?.value);
     const gradingScale = feeScaleEl?.value || null;
 
     if (feeStatusEl) {
@@ -807,6 +894,7 @@ async function attachAdminSettingsHandlers() {
 
     const payload = {
       default_tuition: Number.isFinite(defaultTuition) && defaultTuition > 0 ? defaultTuition : null,
+      fee_structure: feeMapping,
       grading_scale: gradingScale || null
     };
 
@@ -1074,10 +1162,38 @@ async function attachResultsHandlers() {
 async function loadFeeManagementPage() {
   const session = loadSession();
   const feeHistory = document.getElementById('feeHistory');
+  const classFeeForm = document.getElementById('classFeeForm');
+  const classFeeConfigEl = document.getElementById('classFeeConfig');
+  const classFeeStatusEl = document.getElementById('classFeeStatus');
   if (!session?.schoolId || !feeHistory) return;
 
   const client = window.getSupabase ? window.getSupabase() : null;
   if (!client) return;
+
+  const { data: schoolData } = await client.from('schools').select('fee_structure, default_tuition').eq('id', session.schoolId).single();
+  if (classFeeConfigEl) {
+    classFeeConfigEl.value = JSON.stringify(schoolData?.fee_structure || {}, null, 2);
+  }
+
+  classFeeForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const mapping = parseFeeMapping(classFeeConfigEl?.value || '{}');
+    if (classFeeStatusEl) {
+      classFeeStatusEl.textContent = 'Saving class fees...';
+    }
+
+    const { error } = await client.from('schools').update({ fee_structure: mapping }).eq('id', session.schoolId);
+    if (error) {
+      if (classFeeStatusEl) {
+        classFeeStatusEl.textContent = error.message || 'Unable to save class fees.';
+      }
+      return;
+    }
+
+    if (classFeeStatusEl) {
+      classFeeStatusEl.textContent = 'Class fees saved successfully.';
+    }
+  });
 
   const { data, error } = await client.from('payments').select('student_id, amount, status, method, tx_ref').eq('school_id', session.schoolId).order('created_at', { ascending: false }).limit(20);
   if (error) {
@@ -1103,6 +1219,31 @@ async function attachParentPortalHandlers() {
       status.textContent = 'Opening payment checkout...';
     }
   });
+
+  const childSelector = document.getElementById('childSelector');
+  if (childSelector) {
+    childSelector.addEventListener('change', async () => {
+      const session = loadSession();
+      const client = window.getSupabase ? window.getSupabase() : null;
+      if (!session || !client) return;
+
+      const selectedStudentId = childSelector.value;
+      const { data: student } = await client.from('students').select('id, name, class_name').eq('id', selectedStudentId).maybeSingle();
+      const { data: schoolData } = await client.from('schools').select('fee_structure, default_tuition').eq('id', session.schoolId).maybeSingle();
+      const feeMap = parseFeeMapping(schoolData?.fee_structure || {});
+      const feeAmount = Number(feeMap?.[student?.class_name] || schoolData?.default_tuition || 0);
+      const feeBreakdownEl = document.getElementById('childFeeBreakdown');
+      if (feeBreakdownEl) {
+        feeBreakdownEl.innerHTML = `<p><strong>${student?.name || 'Selected child'}</strong></p><p>${student?.class_name || 'Class'} fee: ${formatCurrency(feeAmount)}</p>`;
+      }
+
+      const balanceEl = document.getElementById('balanceAmount');
+      const paymentBalanceEl = document.getElementById('paymentBalance');
+      if (balanceEl) balanceEl.textContent = formatCurrency(feeAmount);
+      if (paymentBalanceEl) paymentBalanceEl.textContent = formatCurrency(feeAmount);
+      payButton.dataset.studentId = student?.id || '';
+    });
+  }
 }
 
 async function loginUser(email, password, remember, expectedRole) {

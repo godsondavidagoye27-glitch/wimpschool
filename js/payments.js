@@ -51,6 +51,9 @@ async function initializeFlutterwavePayment(payButton) {
   const amount = Number(amountText.replace(/[^0-9.-]/g, '')) || 0;
   const transactionReference = `WIMP-${Date.now()}`;
   const email = session?.data?.session?.user?.email || 'parent@example.com';
+  const childName = document.getElementById('childName')?.textContent || 'Parent';
+  const childSelector = document.getElementById('childSelector');
+  const selectedStudentId = childSelector?.value || payButton.dataset.studentId || null;
 
   window.FlutterwaveCheckout({
     public_key: wimpSchoolConfig.flutterwavePublicKey,
@@ -62,7 +65,7 @@ async function initializeFlutterwavePayment(payButton) {
     customer: {
       email,
       phonenumber: payButton.dataset.parentId || '',
-      name: document.getElementById('childName')?.textContent || 'Parent'
+      name: childName
     },
     customizations: {
       title: 'WimpSchool fee payment',
@@ -74,19 +77,29 @@ async function initializeFlutterwavePayment(payButton) {
       if (response.status === 'successful') {
         void (async () => {
           const txRef = response.transaction_id || response.tx_ref || transactionReference;
-          await recordPayment({
-            studentId: payButton.dataset.studentId || null,
+          const result = await recordPayment({
+            studentId: selectedStudentId || payButton.dataset.studentId || null,
             parentId: payButton.dataset.parentId || null,
             schoolId: payButton.dataset.schoolId || null,
             amount,
             status: 'paid',
             method: 'flutterwave',
-            txRef
+            txRef,
+            description: `School fee payment for ${childName}`
           });
+
+          if (statusLabel) {
+            statusLabel.textContent = 'Payment successful. Updating your portal now...';
+          }
+
+          if (!result.error && typeof window.refreshParentPortalData === 'function') {
+            await window.refreshParentPortalData();
+          }
+
+          if (statusLabel) {
+            statusLabel.textContent = 'Payment successful. Your portal is updated.';
+          }
         })();
-        if (statusLabel) {
-          statusLabel.textContent = 'Payment successful. Thank you!';
-        }
         paymentsShowMessage('Payment successful. Thank you!', 'success');
       } else {
         if (statusLabel) {
