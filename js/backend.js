@@ -81,6 +81,62 @@ async function bulkImportStudents(file, schoolId) {
   return { data, error };
 }
 
+async function bulkImportResults(file, schoolId, teacherId) {
+  const rows = await parseCsvFile(file);
+  if (!rows.length) {
+    return { error: { message: 'No result rows found in the upload file.' } };
+  }
+
+  const filteredRows = rows
+    .filter(row => row.student_code && row.subject && row.score !== undefined && row.term)
+    .map(row => ({
+      student_code: normalizeString(row.student_code),
+      subject: normalizeString(row.subject),
+      score: Number(row.score),
+      term: normalizeString(row.term)
+    }));
+
+  if (!filteredRows.length) {
+    return { error: { message: 'Upload file must include student_code, subject, score, and term for each row.' } };
+  }
+
+  const studentCodes = [...new Set(filteredRows.map(row => row.student_code))];
+  const { data: students, error: studentsError } = await supabase
+    .from('students')
+    .select('id, student_code')
+    .in('student_code', studentCodes)
+    .eq('school_id', schoolId);
+
+  if (studentsError) {
+    return { error: studentsError };
+  }
+
+  const studentMap = new Map((students || []).map(student => [normalizeString(student.student_code), student.id]));
+  const records = filteredRows
+    .map(row => {
+      const studentId = studentMap.get(row.student_code);
+      if (!studentId) return null;
+      return {
+        student_id: studentId,
+        teacher_id: teacherId,
+        school_id: schoolId,
+        subject: row.subject,
+        score: row.score,
+        term: row.term,
+        submitted: true,
+        submitted_at: new Date().toISOString()
+      };
+    })
+    .filter(Boolean);
+
+  if (!records.length) {
+    return { error: { message: 'No matching students were found for the uploaded student codes.' } };
+  }
+
+  const { data, error } = await supabase.from('results').insert(records).select();
+  return { data, error };
+}
+
 async function inviteTeacher(payload) {
   const inviteToken = generateInviteToken();
   const { data, error } = await supabase.from('teachers').insert([

@@ -439,8 +439,63 @@ async function attachStudentManagementHandlers() {
   });
 }
 
+async function loadTeacherList() {
+  const teacherList = document.getElementById('teacherList');
+  if (!teacherList) return;
+
+  const session = loadSession();
+  if (!session?.schoolId) {
+    teacherList.innerHTML = '<p>Unable to load teachers. Please sign in again.</p>';
+    return;
+  }
+
+  const client = window.getSupabase ? window.getSupabase() : null;
+  if (!client) {
+    teacherList.innerHTML = '<p>Unable to connect to the database.</p>';
+    return;
+  }
+
+  const { data: teachers, error } = await client
+    .from('teachers')
+    .select('id, name, email, subjects, classes, account_created')
+    .eq('school_id', session.schoolId)
+    .order('created_at', { ascending: false });
+
+  if (error || !teachers?.length) {
+    teacherList.innerHTML = '<p>No teachers found. Create one above to get started.</p>';
+    return;
+  }
+
+  teacherList.innerHTML = `
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="border-bottom: 2px solid #e63a2e;">
+          <th style="text-align: left; padding: 8px;">Name</th>
+          <th style="text-align: left; padding: 8px;">Email</th>
+          <th style="text-align: left; padding: 8px;">Subjects</th>
+          <th style="text-align: left; padding: 8px;">Classes</th>
+          <th style="text-align: left; padding: 8px;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${teachers.map(teacher => `
+          <tr style="border-bottom: 1px solid #ddd;">
+            <td style="padding: 8px;">${teacher.name}</td>
+            <td style="padding: 8px; word-break: break-all;">${teacher.email}</td>
+            <td style="padding: 8px;">${teacher.subjects || '—'}</td>
+            <td style="padding: 8px;">${teacher.classes || '—'}</td>
+            <td style="padding: 8px;">${teacher.account_created ? '✅ Active' : '⏳ Invited'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
 async function attachTeacherManagementHandlers() {
   const form = document.getElementById('teacherForm');
+  const status = document.getElementById('teacherCreateStatus');
+
   form?.addEventListener('submit', async event => {
     event.preventDefault();
     const session = loadSession();
@@ -456,15 +511,34 @@ async function attachTeacherManagementHandlers() {
       schoolId: session.schoolId
     };
 
-    const status = document.getElementById('teacherCreateStatus');
-    status.textContent = 'Sending teacher invite...';
-    const { data, error, token } = await inviteTeacher(payload);
-    if (error) {
-      status.textContent = error.message || 'Unable to send invite.';
+    if (!payload.name || !payload.email) {
+      if (status) {
+        status.textContent = 'Please provide a name and email for the teacher.';
+      }
       return;
     }
-    status.textContent = `Teacher invited: ${payload.email}. Invite token: ${token}`;
+
+    if (status) {
+      status.textContent = 'Sending teacher invite...';
+    }
+
+    const { data, error, token } = await inviteTeacher(payload);
+    if (error) {
+      if (status) {
+        status.textContent = error.message || 'Unable to send invite.';
+      }
+      return;
+    }
+
+    if (status) {
+      status.textContent = `Teacher invited: ${payload.email}. Invite token: ${token}`;
+    }
+
+    form?.reset();
+    await loadTeacherList();
   });
+
+  await loadTeacherList();
 }
 
 async function attachAnnouncementHandlers() {
@@ -501,30 +575,135 @@ async function attachAnnouncementHandlers() {
 
 async function attachResultsHandlers() {
   const form = document.getElementById('resultsForm');
+  const bulkUploadInput = document.getElementById('bulkResultUploadInput');
+  const resultStatus = document.getElementById('resultsStatus');
+  const bulkStatus = document.getElementById('bulkResultStatus');
+
+  const session = loadSession();
+  if (!session?.schoolId || !session?.userId) {
+    if (resultStatus) {
+      resultStatus.textContent = 'Unable to determine school or user. Please log in again.';
+    }
+    return;
+  }
+
+  const client = window.getSupabase ? window.getSupabase() : null;
+  if (!client) {
+    if (resultStatus) {
+      resultStatus.textContent = 'Unable to connect to database.';
+    }
+    return;
+  }
+
   form?.addEventListener('submit', async event => {
     event.preventDefault();
-    const session = loadSession();
-    if (!session?.schoolId) {
-      return showMessage('Unable to determine school. Please log in again.');
-    }
 
-    const payload = {
-      studentId: document.getElementById('resultStudentId')?.value.trim(),
-      subject: document.getElementById('resultSubject')?.value.trim(),
-      score: Number(document.getElementById('resultScore')?.value),
-      term: document.getElementById('resultTerm')?.value.trim(),
-      teacherId: session.userId,
-      schoolId: session.schoolId
-    };
+    const studentCode = document.getElementById('resultStudentId')?.value.trim();
+    const subject = document.getElementById('resultSubject')?.value.trim();
+    const score = Number(document.getElementById('resultScore')?.value);
+    const term = document.getElementById('resultTerm')?.value.trim();
 
-    const status = document.getElementById('resultsStatus');
-    status.textContent = 'Saving result...';
-    const { data, error } = await submitResult(payload);
-    if (error) {
-      status.textContent = error.message || 'Unable to save result.';
+    if (!studentCode || !subject || !term || Number.isNaN(score)) {
+      if (resultStatus) {
+        resultStatus.textContent = 'Please fill in all fields correctly.';
+      }
       return;
     }
-    status.textContent = `Result saved for student ${payload.studentId} (${payload.subject}).`;
+
+    if (resultStatus) {
+      resultStatus.textContent = 'Finding student...';
+    }
+
+    const { data: student, error: studentError } = await client
+      .from('students')
+      .select('id')
+      .eq('school_id', session.schoolId)
+      .eq('student_code', studentCode)
+      .single();
+
+    if (studentError || !student) {
+      if (resultStatus) {
+        resultStatus.textContent = `Student code ${studentCode} not found.`;
+      }
+      return;
+    }
+
+    const { data: teacher, error: teacherError } = await client
+      .from('teachers')
+      .select('id')
+      .eq('school_id', session.schoolId)
+      .eq('user_id', session.userId)
+      .single();
+
+    if (teacherError || !teacher) {
+      if (resultStatus) {
+        resultStatus.textContent = 'Teacher record not found.';
+      }
+      return;
+    }
+
+    if (resultStatus) {
+      resultStatus.textContent = 'Saving result...';
+    }
+
+    const { data, error } = await submitResult({
+      studentId: student.id,
+      teacherId: teacher.id,
+      schoolId: session.schoolId,
+      subject,
+      score,
+      term
+    });
+
+    if (error) {
+      if (resultStatus) {
+        resultStatus.textContent = error.message || 'Unable to save result.';
+      }
+      return;
+    }
+
+    if (resultStatus) {
+      resultStatus.textContent = `Result saved successfully for ${studentCode}.`;
+    }
+    form?.reset();
+  });
+
+  bulkUploadInput?.addEventListener('change', async event => {
+    event.preventDefault();
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (bulkStatus) {
+      bulkStatus.textContent = 'Uploading results...';
+    }
+
+    const { data: teacher, error: teacherError } = await client
+      .from('teachers')
+      .select('id')
+      .eq('school_id', session.schoolId)
+      .eq('user_id', session.userId)
+      .single();
+
+    if (teacherError || !teacher) {
+      if (bulkStatus) {
+        bulkStatus.textContent = 'Teacher record not found.';
+      }
+      return;
+    }
+
+    const result = await bulkImportResults(file, session.schoolId, teacher.id);
+    if (result.error) {
+      if (bulkStatus) {
+        bulkStatus.textContent = result.error.message || 'Bulk upload failed.';
+      }
+      return;
+    }
+
+    if (bulkStatus) {
+      const count = Array.isArray(result.data) ? result.data.length : 0;
+      bulkStatus.textContent = `Uploaded ${count} result${count === 1 ? '' : 's'} successfully.`;
+    }
+    bulkUploadInput.value = '';
   });
 }
 
