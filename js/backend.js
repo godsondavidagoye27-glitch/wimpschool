@@ -276,7 +276,8 @@ async function sendSchoolNotification(payload) {
         body: JSON.stringify({
           ...payload,
           created_at: new Date().toISOString()
-        })
+        }),
+        headers: { 'Content-Type': 'application/json' }
       });
 
       if (!response.error) {

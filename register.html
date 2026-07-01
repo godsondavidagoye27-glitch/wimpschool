@@ -25,6 +25,11 @@
       <h1>Register your school</h1>
       <p>Set up your school, create the first admin account, and start inviting parents.</p>
 
+      <div class="auth-highlight">
+        <h3>Brand the parent and teacher experience</h3>
+        <p>Your school logo, colors, and plan settings are applied automatically once your account is created so the portal feels consistent from day one.</p>
+      </div>
+
       <form id="registerForm">
         <fieldset>
           <legend>School details</legend>
@@ -43,8 +48,8 @@
           <label>School email</label>
           <input type="email" id="schoolEmail" placeholder="admin@example.com" required />
 
-          <label>Upload logo</label>
-          <input type="file" id="schoolLogo" accept="image/*" />
+          <label>School logo URL</label>
+          <input type="url" id="schoolLogoUrl" placeholder="https://example.com/logo.png" />
         </fieldset>
 
         <fieldset>
@@ -62,10 +67,9 @@
         <fieldset>
           <legend>Subscription plan</legend>
           <select id="subscriptionPlan" required>
-            <option value="free">Free Trial</option>
-            <option value="basic">Basic</option>
-            <option value="standard">Standard</option>
-            <option value="premium">Premium</option>
+            <option value="Starter">Starter</option>
+            <option value="Growth">Growth</option>
+            <option value="Elite">Elite</option>
           </select>
         </fieldset>
 

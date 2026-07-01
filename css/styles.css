@@ -475,6 +475,47 @@ main {
   margin-top: 24px;
 }
 
+.dashboard-panel {
+  margin-bottom: 24px;
+}
+
+.compact-highlight {
+  padding: 24px 26px;
+  background: linear-gradient(135deg, rgba(230,58,46,.11), rgba(26,31,94,.04));
+  border: 1px solid rgba(230,58,46,.16);
+}
+
+.highlight-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.82);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: .8rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.shortcut-list {
+  margin: 14px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+}
+
+.shortcut-list li + li {
+  margin-top: 8px;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
 .dashboard-notifications {
   display: flex;
   flex-direction: column;
@@ -752,7 +793,7 @@ input:focus, select:focus, textarea:focus {
 
   .btn, .button { width: 100%; border-radius: 12px; }
 
-  .feature-grid, .testimonial-grid, .pricing-grid, .stat-grid, .quick-grid, .upgrade-grid {
+  .feature-grid, .testimonial-grid, .pricing-grid, .stat-grid, .quick-grid, .upgrade-grid, .settings-grid {
     grid-template-columns: 1fr;
   }
 
@@ -811,6 +852,12 @@ input:focus, select:focus, textarea:focus {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.export-select {
+  min-width: 120px;
+  margin-bottom: 0;
 }
 
 .charts-panel {

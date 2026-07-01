@@ -262,6 +262,9 @@ async function signUpSchoolAdmin(payload) {
         {
           name: payload.schoolName,
           address: payload.schoolAddress,
+          email: payload.schoolEmail,
+          phone: payload.schoolPhone,
+          logo_url: payload.schoolLogoUrl || null,
           school_code: payload.schoolCode,
           subscription_plan: payload.subscriptionPlan,
           next_billing_date: nextBillingDate.toISOString(),

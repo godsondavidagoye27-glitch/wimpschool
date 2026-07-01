@@ -81,7 +81,7 @@ async function renderNotificationsWidget() {
 
   container.innerHTML = notifications.map(item => `
     <article class="notification-item">
-      <strong>${item.type || 'update'}</strong>
+      <strong>${(item.type || 'update').replace(/_/g, ' ')}</strong>
       <p>${item.message || 'New update available.'}</p>
       <p>${item.created_at ? new Date(item.created_at).toLocaleString() : ''}</p>
     </article>
@@ -91,12 +91,16 @@ async function renderNotificationsWidget() {
 async function exportDashboardSummary() {
   const client = window.getSupabase ? window.getSupabase() : null;
   const schoolId = getSavedSchoolId();
+  const exportFormat = document.getElementById('dashboardExportFormat')?.value || 'csv';
   if (!client || !schoolId) return;
 
-  const [studentsResult, teachersResult, paymentsResult] = await Promise.all([
+  const [studentsResult, teachersResult, paymentsResult, attendanceResult, resultsResult, schoolResult] = await Promise.all([
     client.from('students').select('id').eq('school_id', schoolId),
     client.from('teachers').select('id').eq('school_id', schoolId),
-    client.from('payments').select('amount, status').eq('school_id', schoolId)
+    client.from('payments').select('amount, status').eq('school_id', schoolId),
+    client.from('attendance').select('status').eq('school_id', schoolId),
+    client.from('results').select('score').eq('school_id', schoolId),
+    client.from('schools').select('name, subscription_plan, pending_subscription_plan').eq('id', schoolId).single()
   ]);
 
   const totalStudents = studentsResult.data?.length || 0;
@@ -104,21 +108,47 @@ async function exportDashboardSummary() {
   const payments = paymentsResult.data || [];
   const paidTotal = payments.filter(item => item.status === 'paid').reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const outstandingTotal = payments.filter(item => item.status !== 'paid').reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const attendanceTotal = attendanceResult.data?.length || 0;
+  const presentAttendance = (attendanceResult.data || []).filter(item => item.status === 'present').length;
+  const attendanceRate = attendanceTotal ? Math.round((presentAttendance / attendanceTotal) * 100) : 0;
+  const averageScore = (resultsResult.data || []).reduce((sum, item) => sum + Number(item.score || 0), 0) / Math.max((resultsResult.data || []).length, 1);
 
-  const rows = [
-    ['metric', 'value'],
-    ['students', totalStudents],
-    ['teachers', totalTeachers],
-    ['fees_paid', paidTotal],
-    ['fees_outstanding', outstandingTotal]
-  ];
+  const summary = {
+    schoolName: schoolResult.data?.name || 'WimpSchool',
+    schoolId,
+    generatedAt: new Date().toISOString(),
+    metrics: {
+      students: totalStudents,
+      teachers: totalTeachers,
+      feesPaid: paidTotal,
+      feesOutstanding: outstandingTotal,
+      attendanceRate,
+      averageScore: Math.round(averageScore),
+      resultsLogged: resultsResult.data?.length || 0,
+      paymentsRecorded: payments.length,
+      currentPlan: schoolResult.data?.subscription_plan || 'Starter',
+      pendingPlan: schoolResult.data?.pending_subscription_plan || null
+    }
+  };
 
-  const csv = rows.map(row => row.join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const blob = exportFormat === 'json'
+    ? new Blob([JSON.stringify(summary, null, 2)], { type: 'application/json;charset=utf-8;' })
+    : new Blob([[
+      ['metric', 'value'],
+      ['students', totalStudents],
+      ['teachers', totalTeachers],
+      ['fees_paid', paidTotal],
+      ['fees_outstanding', outstandingTotal],
+      ['attendance_rate', attendanceRate],
+      ['average_score', Math.round(averageScore)],
+      ['results_logged', summary.metrics.resultsLogged],
+      ['payments_recorded', summary.metrics.paymentsRecorded]
+    ].map(row => row.join(',')).join('\n')], { type: 'text/csv;charset=utf-8;' });
+
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = 'wimpschool-dashboard-summary.csv';
+  anchor.download = `wimpschool-dashboard-summary.${exportFormat === 'json' ? 'json' : 'csv'}`;
   anchor.click();
   URL.revokeObjectURL(url);
 }
@@ -350,6 +380,8 @@ async function renderEliteAnalytics() {
     fetchOutstandingFees()
   ]);
 
+  const resultCountEl = document.getElementById('eliteResultCount');
+
   const paidTotal = await (async () => {
     const client = window.getSupabase ? window.getSupabase() : null;
     const schoolId = getSavedSchoolId();
@@ -375,6 +407,16 @@ async function renderEliteAnalytics() {
   if (scoreEl) {
     const averageScore = await fetchEliteAverageScore();
     scoreEl.textContent = averageScore === null ? 'No results data' : `${averageScore}/100`;
+  }
+  if (resultCountEl) {
+    const client = window.getSupabase ? window.getSupabase() : null;
+    const schoolId = getSavedSchoolId();
+    if (client && schoolId) {
+      const { count, error } = await client.from('results').select('id', { count: 'exact', head: true }).eq('school_id', schoolId);
+      resultCountEl.textContent = error ? '0' : (count || 0);
+    } else {
+      resultCountEl.textContent = '0';
+    }
   }
 }
 

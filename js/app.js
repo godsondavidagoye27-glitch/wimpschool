@@ -13,6 +13,8 @@ function applySchoolBrandingPreview({ schoolName, primaryColor, schoolLogoUrl })
   const displayName = schoolName || 'WimpSchool';
   const fallbackLogo = schoolLogoUrl || 'favicon.svg';
 
+  document.title = `${displayName} | WimpSchool`;
+
   document.querySelectorAll('.brand').forEach(brandEl => {
     brandEl.innerHTML = `
       <span class="brand-shell">

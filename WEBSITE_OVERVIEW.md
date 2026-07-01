@@ -89,15 +89,14 @@ Later enhancements can include:
 ### Parent flow
 - `parent-portal.html` shows child name, balance, attendance, and announcements
 - `js/app.js` fetches parent and student records for the logged-in parent
+- The portal now uses a more polished branded experience for parents and a clearer fee/payment view
 
-## What to improve next
-- Complete mobile-responsive layout and spacing across all pages
-- Finish the richer pricing page with actual plan comparison details and Elite positioning
-- Add email/SMS notifications for invites, payment reminders, and plan upgrade alerts
-- Expand school branding support into the parent portal and login/dashboard themes
-- Implement strong Supabase RLS rules and production-ready policies
-- Add backend-driven analytics, reporting exports, and Elite client dashboards
-- Validate settings persistence with end-to-end UI testing and data flow checks
+## What remains to finish
+- Final live verification of the settings, branding, and notification flows in a real Supabase-backed session
+- Connect notification delivery to external channels such as email and SMS once provider credentials are available
+- Expand the Elite analytics experience with richer reports, export formats, and more detailed school summaries
+- Harden the production RLS setup further for any remaining tables and edge cases in the school workflow
+- Continue polishing the remaining admin and teacher screens for a more complete mobile experience
 
 ## Notes for pitching
 - Emphasize role separation: admins, teachers, and parents never share views
