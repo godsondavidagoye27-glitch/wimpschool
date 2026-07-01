@@ -255,7 +255,9 @@ async function recordPayment(payload) {
     await sendSchoolNotification({
       schoolId: payload.schoolId,
       type: payload.status === 'paid' ? 'payment' : 'payment_pending',
-      message: `Payment ${payload.status || 'recorded'} for ₦${Number(payload.amount || 0)}`
+      message: payload.status === 'paid'
+        ? `Payment received for ₦${Number(payload.amount || 0)}`
+        : `Payment reminder created for ₦${Number(payload.amount || 0)}`
     });
   }
 
@@ -268,6 +270,23 @@ async function reconcilePayment(txRef, status) {
 }
 
 async function sendSchoolNotification(payload) {
+  try {
+    if (supabase?.functions?.invoke) {
+      const response = await supabase.functions.invoke('notifications', {
+        body: JSON.stringify({
+          ...payload,
+          created_at: new Date().toISOString()
+        })
+      });
+
+      if (!response.error) {
+        return { data: response.data, error: null };
+      }
+    }
+  } catch (err) {
+    console.warn('Notification function call failed:', err);
+  }
+
   const { data, error } = await supabase.from('notifications').insert([
     {
       user_id: payload.userId || null,

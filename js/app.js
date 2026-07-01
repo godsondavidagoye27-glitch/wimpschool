@@ -739,6 +739,12 @@ async function attachAdminSettingsHandlers() {
     if (planStatusEl) {
       planStatusEl.textContent = `Upgrade scheduled to ${selectedPlan} starting ${new Date(updated.subscription_change_effective_date).toLocaleDateString()}.`;
     }
+
+    await sendSchoolNotification({
+      schoolId: session.schoolId,
+      type: 'plan_upgrade',
+      message: `Plan upgrade to ${selectedPlan} has been scheduled.`
+    });
   });
 
   profileForm?.addEventListener('submit', async event => {
