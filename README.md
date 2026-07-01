@@ -62,15 +62,21 @@ This creates `js/config.js` from `.env`. `js/config.js` is ignored by git to kee
 supabase functions deploy super-admin-login
 ```
 
-5. Start the local site:
+5. Configure external notification delivery by adding these env vars to your Supabase project for the notifications Edge Function:
+
+- `SENDGRID_API_KEY` for transactional email delivery
+- `NOTIFICATION_FROM_EMAIL` for the sender address
+- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM` for SMS delivery
+
+6. Start the local site:
 
 ```bash
 npm start
 ```
 
-5. Supabase auth/database logic is implemented in `js/auth.js` and session-backed role enforcement is active in `js/app.js`.
-6. Flutterwave inline checkout integration is now wired in `js/payments.js`.
-7. Dashboard pages now include live data hooks for school admin, teacher, and parent views.
+6. Supabase auth/database logic is implemented in `js/auth.js` and session-backed role enforcement is active in `js/app.js`.
+7. Flutterwave inline checkout integration is now wired in `js/payments.js`.
+8. Dashboard pages now include live data hooks for school admin, teacher, and parent views.
 
 ## Notes
 

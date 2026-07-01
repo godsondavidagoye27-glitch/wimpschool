@@ -9,6 +9,7 @@ const supabase = createClient(
 async function sendExternalChannel(channel: string, payload: Record<string, unknown>) {
   if (channel === 'email') {
     const apiKey = Deno.env.get('SENDGRID_API_KEY');
+    const from = (payload.from as string) || Deno.env.get('NOTIFICATION_FROM_EMAIL') || 'hello@wimpschool.com';
     if (!apiKey) return { ok: false, reason: 'sendgrid-not-configured' };
 
     const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
@@ -19,7 +20,7 @@ async function sendExternalChannel(channel: string, payload: Record<string, unkn
       },
       body: JSON.stringify({
         personalizations: [{ to: [{ email: payload.to as string }] }],
-        from: { email: payload.from as string || 'hello@wimpschool.com' },
+        from: { email: from },
         subject: payload.subject as string || 'WimpSchool update',
         content: [{ type: 'text/plain', value: payload.message as string || '' }]
       })
@@ -81,7 +82,11 @@ serve(async req => {
         subject,
         message
       });
-      return new Response(JSON.stringify({ data, external: externalResult }), { status: 201 });
+      return new Response(JSON.stringify({
+        data,
+        external: externalResult,
+        configured: externalResult.ok || ['sendgrid-not-configured', 'twilio-not-configured'].includes(externalResult.reason as string)
+      }), { status: 201 });
     }
 
     return new Response(JSON.stringify({ data, external: { ok: false, reason: 'not-requested' } }), { status: 201 });

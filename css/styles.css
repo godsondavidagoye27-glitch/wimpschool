@@ -909,4 +909,14 @@ input:focus, select:focus, textarea:focus {
   .auth-panel {
     padding: 28px;
   }
+
+  .dashboard-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .export-select {
+    width: 100%;
+  }
 }
