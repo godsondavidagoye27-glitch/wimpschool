@@ -712,7 +712,22 @@ async function enforcePageRole() {
 
   const userId = sessionInfo.data.session.user.id;
   const roleResult = await fetchUserRole(userId);
-  if (roleResult.error || !roleResult.data) {
+  if (roleResult.error) {
+    // If there's an explicit error (permissions/RLS), bail out
+    window.location.href = 'login.html';
+    return false;
+  }
+
+  // If no role was found in the DB, fall back to any saved client-side session
+  if (!roleResult.data) {
+    const saved = loadSession();
+    if (saved && saved.userId === userId && saved.role) {
+      // Use saved session
+      showProtectedContent();
+      return true;
+    }
+
+    // No saved session to rely on - redirect to login
     window.location.href = 'login.html';
     return false;
   }
