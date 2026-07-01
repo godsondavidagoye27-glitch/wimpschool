@@ -55,9 +55,35 @@ button, input, select {
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-weight: 700;
   font-size: 1.4rem;
   color: var(--accent);
+}
+
+.brand-shell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 2px solid rgba(230,58,46,.16);
+  background: #fff;
+}
+
+.brand-subtitle {
+  display: block;
+  font-size: .78rem;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 2px;
 }
 
 .site-nav, .dashboard-nav {
@@ -503,6 +529,27 @@ main {
 .auth-panel p {
   color: var(--muted);
   margin-bottom: 28px;
+}
+
+.auth-highlight,
+.portal-highlight {
+  background: linear-gradient(135deg, rgba(230,58,46,.08), rgba(26,31,94,.04));
+  border: 1px solid rgba(230,58,46,.14);
+  border-radius: 20px;
+  padding: 18px 20px;
+  margin-bottom: 24px;
+}
+
+.auth-highlight h3,
+.portal-highlight h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.auth-highlight p,
+.portal-highlight p {
+  margin: 0;
+  color: var(--muted);
 }
 
 label {

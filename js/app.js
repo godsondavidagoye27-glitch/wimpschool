@@ -10,10 +10,16 @@ function setTextContentById(id, text) {
 }
 
 function applySchoolBrandingPreview({ schoolName, primaryColor, schoolLogoUrl }) {
+  const displayName = schoolName || 'WimpSchool';
+  const fallbackLogo = schoolLogoUrl || 'favicon.svg';
+
   document.querySelectorAll('.brand').forEach(brandEl => {
-    if (brandEl && schoolName) {
-      brandEl.textContent = schoolName;
-    }
+    brandEl.innerHTML = `
+      <span class="brand-shell">
+        <img class="brand-logo" src="${fallbackLogo}" alt="school logo" />
+        <span class="brand-text">${displayName}</span>
+      </span>
+    `;
   });
 
   if (primaryColor) {
@@ -23,15 +29,6 @@ function applySchoolBrandingPreview({ schoolName, primaryColor, schoolLogoUrl })
   const themeMeta = document.querySelector('meta[name="theme-color"]');
   if (themeMeta && primaryColor) {
     themeMeta.setAttribute('content', primaryColor);
-  }
-
-  if (schoolLogoUrl) {
-    document.querySelectorAll('.brand').forEach(brandEl => {
-      if (!brandEl.dataset.logoApplied) {
-        brandEl.insertAdjacentHTML('afterbegin', `<img src="${schoolLogoUrl}" alt="school logo" style="width:24px;height:24px;border-radius:999px;object-fit:cover;margin-right:8px;" />`);
-        brandEl.dataset.logoApplied = 'true';
-      }
-    });
   }
 }
 
