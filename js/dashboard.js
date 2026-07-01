@@ -97,7 +97,7 @@ async function exportDashboardSummary() {
   const [studentsResult, teachersResult, paymentsResult, attendanceResult, resultsResult, schoolResult] = await Promise.all([
     client.from('students').select('id').eq('school_id', schoolId),
     client.from('teachers').select('id').eq('school_id', schoolId),
-    client.from('payments').select('amount, status').eq('school_id', schoolId),
+    client.from('payments').select('amount, status, created_at, student_id').eq('school_id', schoolId).order('created_at', { ascending: false }).limit(10),
     client.from('attendance').select('status').eq('school_id', schoolId),
     client.from('results').select('score').eq('school_id', schoolId),
     client.from('schools').select('name, subscription_plan, pending_subscription_plan').eq('id', schoolId).single()
@@ -112,6 +112,17 @@ async function exportDashboardSummary() {
   const presentAttendance = (attendanceResult.data || []).filter(item => item.status === 'present').length;
   const attendanceRate = attendanceTotal ? Math.round((presentAttendance / attendanceTotal) * 100) : 0;
   const averageScore = (resultsResult.data || []).reduce((sum, item) => sum + Number(item.score || 0), 0) / Math.max((resultsResult.data || []).length, 1);
+
+  const studentIds = [...new Set(payments.map(item => item.student_id).filter(Boolean))];
+  const { data: students } = studentIds.length ? await client.from('students').select('id, name').in('id', studentIds) : { data: [] };
+  const studentMap = new Map((students || []).map(student => [student.id, student.name]));
+
+  const recentPayments = payments.map(item => ({
+    studentName: studentMap.get(item.student_id) || 'Unknown student',
+    amount: Number(item.amount || 0),
+    status: item.status || 'unknown',
+    createdAt: item.created_at || null
+  }));
 
   const summary = {
     schoolName: schoolResult.data?.name || 'WimpSchool',
@@ -128,27 +139,78 @@ async function exportDashboardSummary() {
       paymentsRecorded: payments.length,
       currentPlan: schoolResult.data?.subscription_plan || 'Starter',
       pendingPlan: schoolResult.data?.pending_subscription_plan || null
-    }
+    },
+    recentPayments
   };
 
-  const blob = exportFormat === 'json'
-    ? new Blob([JSON.stringify(summary, null, 2)], { type: 'application/json;charset=utf-8;' })
-    : new Blob([[
-      ['metric', 'value'],
-      ['students', totalStudents],
-      ['teachers', totalTeachers],
-      ['fees_paid', paidTotal],
-      ['fees_outstanding', outstandingTotal],
-      ['attendance_rate', attendanceRate],
-      ['average_score', Math.round(averageScore)],
-      ['results_logged', summary.metrics.resultsLogged],
-      ['payments_recorded', summary.metrics.paymentsRecorded]
-    ].map(row => row.join(',')).join('\n')], { type: 'text/csv;charset=utf-8;' });
+  let content = '';
+  let fileName = 'wimpschool-dashboard-report';
+  let mimeType = 'text/plain;charset=utf-8;';
 
+  if (exportFormat === 'json') {
+    content = JSON.stringify(summary, null, 2);
+    fileName += '.json';
+    mimeType = 'application/json;charset=utf-8;';
+  } else if (exportFormat === 'html') {
+    const metricsRows = Object.entries(summary.metrics).map(([key, value]) => `<tr><th>${key.replace(/_/g, ' ')}</th><td>${value ?? '—'}</td></tr>`).join('');
+    const paymentRows = summary.recentPayments.length
+      ? summary.recentPayments.map(item => `<tr><td>${item.studentName}</td><td>${formatCurrencyShort(item.amount)}</td><td>${item.status}</td><td>${item.createdAt ? new Date(item.createdAt).toLocaleString() : '—'}</td></tr>`).join('')
+      : '<tr><td colspan="4">No recent payments recorded.</td></tr>';
+    content = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>WimpSchool dashboard report</title><style>body{font-family:Inter,Arial,sans-serif;padding:24px;color:#1a1f5e}table{border-collapse:collapse;width:100%;margin-top:16px}th,td{border:1px solid #e6e8ef;padding:10px;text-align:left}th{background:#fbfbfb}</style></head><body><h1>WimpSchool dashboard report</h1><p>Generated: ${summary.generatedAt}</p><h2>Overview</h2><table>${metricsRows}</table><h2>Recent payments</h2><table><thead><tr><th>Student</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead><tbody>${paymentRows}</tbody></table></body></html>`;
+    fileName += '.html';
+    mimeType = 'text/html;charset=utf-8;';
+  } else if (exportFormat === 'txt') {
+    const lines = [
+      'WimpSchool dashboard report',
+      `School: ${summary.schoolName}`,
+      `Generated: ${summary.generatedAt}`,
+      '',
+      'Overview',
+      `- Students: ${summary.metrics.students}`,
+      `- Teachers: ${summary.metrics.teachers}`,
+      `- Fees paid: ${formatCurrencyShort(summary.metrics.feesPaid)}`,
+      `- Fees outstanding: ${formatCurrencyShort(summary.metrics.feesOutstanding)}`,
+      `- Attendance rate: ${summary.metrics.attendanceRate}%`,
+      `- Average score: ${summary.metrics.averageScore}/100`,
+      `- Results logged: ${summary.metrics.resultsLogged}`,
+      '',
+      'Recent payments'
+    ];
+    if (summary.recentPayments.length) {
+      summary.recentPayments.forEach(item => {
+        lines.push(`- ${item.studentName}: ${formatCurrencyShort(item.amount)} (${item.status}) ${item.createdAt ? new Date(item.createdAt).toLocaleString() : ''}`.trim());
+      });
+    } else {
+      lines.push('- No recent payments recorded.');
+    }
+    content = lines.join('\n');
+    fileName += '.txt';
+  } else {
+    const rows = [
+      ['section', 'label', 'value'],
+      ['overview', 'school_name', summary.schoolName],
+      ['overview', 'students', summary.metrics.students],
+      ['overview', 'teachers', summary.metrics.teachers],
+      ['overview', 'fees_paid', summary.metrics.feesPaid],
+      ['overview', 'fees_outstanding', summary.metrics.feesOutstanding],
+      ['overview', 'attendance_rate', `${summary.metrics.attendanceRate}%`],
+      ['overview', 'average_score', `${summary.metrics.averageScore}/100`],
+      ['overview', 'results_logged', summary.metrics.resultsLogged],
+      ['overview', 'payments_recorded', summary.metrics.paymentsRecorded]
+    ];
+    summary.recentPayments.forEach(item => {
+      rows.push(['recent_payment', item.studentName, `${formatCurrencyShort(item.amount)} | ${item.status} | ${item.createdAt ? new Date(item.createdAt).toLocaleString() : '—'}`]);
+    });
+    content = rows.map(row => row.join(',')).join('\n');
+    fileName += '.csv';
+    mimeType = 'text/csv;charset=utf-8;';
+  }
+
+  const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = `wimpschool-dashboard-summary.${exportFormat === 'json' ? 'json' : 'csv'}`;
+  anchor.download = fileName;
   anchor.click();
   URL.revokeObjectURL(url);
 }
