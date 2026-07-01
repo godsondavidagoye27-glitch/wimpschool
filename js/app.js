@@ -601,9 +601,12 @@ async function registerSchool(payload) {
         const ensure = await ensureUserRole(userId, 'school_admin', schoolId);
         if (ensure.error) {
           console.warn('ensureUserRole warning:', ensure.error);
+          const msg = ensure.error.message || (ensure.error && ensure.error.toString()) || 'Unable to create role for the account.';
+          showMessage(`Role setup warning: ${msg}`, 'error');
         }
       } catch (err) {
         console.warn('ensureUserRole exception:', err);
+        showMessage('Role setup failed. Check the console for details.', 'error');
       }
     })();
 
