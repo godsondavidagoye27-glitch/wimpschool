@@ -22,21 +22,35 @@ function parseEnv(content) {
 let env = {};
 const requiredKeys = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'FLUTTERWAVE_PUBLIC_KEY'];
 
-if (fs.existsSync(envPath)) {
-  env = parseEnv(fs.readFileSync(envPath, 'utf8'));
-} else {
-  const examplePath = path.join(__dirname, '..', '.env.example');
-  if (fs.existsSync(examplePath)) {
-    console.warn('.env file not found. Falling back to .env.example values.');
-    env = parseEnv(fs.readFileSync(examplePath, 'utf8'));
-  } else {
-    console.warn('.env file not found, and .env.example is missing. Falling back to environment variables.');
+// Priority 1: Environment variables (from Render settings or deployment env)
+for (const key of requiredKeys) {
+  if (process.env[key]) {
+    env[key] = process.env[key];
   }
 }
 
-for (const key of requiredKeys) {
-  if ((!env[key] || !env[key].trim()) && process.env[key]) {
-    env[key] = process.env[key];
+// Priority 2: .env file (local development)
+if (fs.existsSync(envPath)) {
+  const fileEnv = parseEnv(fs.readFileSync(envPath, 'utf8'));
+  for (const key of requiredKeys) {
+    if (!env[key] && fileEnv[key]) {
+      env[key] = fileEnv[key];
+    }
+  }
+}
+
+// Priority 3: .env.example, but skip placeholder values
+const examplePath = path.join(__dirname, '..', '.env.example');
+if (fs.existsSync(examplePath)) {
+  const exampleEnv = parseEnv(fs.readFileSync(examplePath, 'utf8'));
+  for (const key of requiredKeys) {
+    if (!env[key] && exampleEnv[key]) {
+      const val = exampleEnv[key];
+      const isPlaceholder = val.includes('your-') || val.includes('xxx') || val.includes('example');
+      if (!isPlaceholder) {
+        env[key] = val;
+      }
+    }
   }
 }
 

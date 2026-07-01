@@ -107,32 +107,37 @@ async function signIn(email, password) {
     return { error: { message: 'Supabase is not initialized.' } };
   }
 
-  const { data: authData, error: authError } = await client.auth.signInWithPassword({
-    email,
-    password
-  });
+  try {
+    const { data: authData, error: authError } = await client.auth.signInWithPassword({
+      email,
+      password
+    });
 
-  if (authError) {
-    return { error: authError };
-  }
-
-  if (!authData?.user) {
-    return { error: { message: 'Authentication failed.' } };
-  }
-
-  const roleResult = await fetchUserRole(authData.user.id);
-  if (roleResult.error) {
-    return { error: roleResult.error };
-  }
-
-  const role = roleResult.data?.role || authData.user.user_metadata?.role || 'school_admin';
-  return {
-    data: {
-      user: authData.user,
-      role,
-      schoolId: roleResult.data?.school_id || null
+    if (authError) {
+      return { error: authError };
     }
-  };
+
+    if (!authData?.user) {
+      return { error: { message: 'Authentication failed.' } };
+    }
+
+    const roleResult = await fetchUserRole(authData.user.id);
+    if (roleResult.error) {
+      return { error: roleResult.error };
+    }
+
+    const role = roleResult.data?.role || authData.user.user_metadata?.role || 'school_admin';
+    return {
+      data: {
+        user: authData.user,
+        role,
+        schoolId: roleResult.data?.school_id || null
+      }
+    };
+  } catch (err) {
+    console.error('signIn error:', err);
+    return { error: { message: err?.message || 'Unable to sign in. Check your network connection.' } };
+  }
 }
 
 async function signUpSchoolAdmin(payload) {
@@ -141,64 +146,69 @@ async function signUpSchoolAdmin(payload) {
     return { error: { message: 'Supabase is not initialized. Check your configuration and script order.' } };
   }
 
-  const { data: signupData, error: signupError } = await client.auth.signUp({
-    email: payload.adminEmail,
-    password: payload.adminPassword,
-    options: {
+  try {
+    const { data: signupData, error: signupError } = await client.auth.signUp({
+      email: payload.adminEmail,
+      password: payload.adminPassword,
+      options: {
+        data: {
+          role: 'school_admin',
+          name: payload.adminName
+        }
+      }
+    });
+
+    if (signupError) {
+      return { error: signupError };
+    }
+
+    const userId = signupData.user?.id;
+    if (!userId) {
+      return { error: { message: 'Unable to create the school administrator account.' } };
+    }
+
+    const { data: schoolData, error: schoolError } = await client
+      .from('schools')
+      .insert([
+        {
+          name: payload.schoolName,
+          address: payload.schoolAddress,
+          school_code: payload.schoolCode,
+          subscription_plan: payload.subscriptionPlan,
+          admin_id: userId,
+          verified: false
+        }
+      ])
+      .select('id')
+      .single();
+
+    if (schoolError) {
+      return { error: schoolError };
+    }
+
+    const schoolId = schoolData?.id;
+    if (!schoolId) {
+      return { error: { message: 'School registration failed.' } };
+    }
+
+    const { error: roleError } = await client.from('user_roles').insert([
+      { user_id: userId, role: 'school_admin', school_id: schoolId }
+    ]);
+
+    if (roleError) {
+      return { error: roleError };
+    }
+
+    return {
       data: {
-        role: 'school_admin',
-        name: payload.adminName
+        user: signupData.user,
+        schoolId
       }
-    }
-  });
-
-  if (signupError) {
-    return { error: signupError };
+    };
+  } catch (err) {
+    console.error('signUpSchoolAdmin error:', err);
+    return { error: { message: err?.message || 'Unable to register school administrator account.' } };
   }
-
-  const userId = signupData.user?.id;
-  if (!userId) {
-    return { error: { message: 'Unable to create the school administrator account.' } };
-  }
-
-  const { data: schoolData, error: schoolError } = await client
-    .from('schools')
-    .insert([
-      {
-        name: payload.schoolName,
-        address: payload.schoolAddress,
-        school_code: payload.schoolCode,
-        subscription_plan: payload.subscriptionPlan,
-        admin_id: userId,
-        verified: false
-      }
-    ])
-    .select('id')
-    .single();
-
-  if (schoolError) {
-    return { error: schoolError };
-  }
-
-  const schoolId = schoolData?.id;
-  if (!schoolId) {
-    return { error: { message: 'School registration failed.' } };
-  }
-
-  const { error: roleError } = await client.from('user_roles').insert([
-    { user_id: userId, role: 'school_admin', school_id: schoolId }
-  ]);
-
-  if (roleError) {
-    return { error: roleError };
-  }
-
-  return {
-    data: {
-      user: signupData.user,
-      schoolId
-    }
-  };
 }
 
 async function sendPasswordReset(email) {
