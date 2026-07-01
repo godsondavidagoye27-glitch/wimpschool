@@ -11,6 +11,12 @@ function inviteShowMessage(text, type = 'info') {
   setTimeout(() => toast.remove(), 4000);
 }
 
+function inviteShowSupportBanner(message) {
+  if (typeof window !== 'undefined' && typeof window.showSupportBanner === 'function') {
+    window.showSupportBanner(message || 'Need help activating your account? Contact support so we can assist you quickly.', 'error');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   const token = new URLSearchParams(window.location.search).get('token');
   if (!token) {
@@ -22,8 +28,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const result = await verifyInviteToken(token);
   if (result.error) {
+    const fallbackMessage = result.error.message || 'Unable to verify this invite.';
+    inviteShowSupportBanner(fallbackMessage);
     document.getElementById('inviteTitle').textContent = 'Invalid invite';
-    document.getElementById('inviteIntro').textContent = result.error.message;
+    document.getElementById('inviteIntro').textContent = fallbackMessage;
     document.getElementById('inviteForm').querySelector('button').disabled = true;
     return;
   }
@@ -48,7 +56,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const acceptResult = await acceptInvite(token, password);
     if (acceptResult.error) {
-      inviteShowMessage(acceptResult.error.message || 'Unable to activate your account.', 'error');
+      const fallbackMessage = acceptResult.error.message || 'Unable to activate your account.';
+      inviteShowSupportBanner(fallbackMessage);
+      inviteShowMessage(fallbackMessage, 'error');
       return;
     }
 

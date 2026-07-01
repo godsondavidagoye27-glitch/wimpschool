@@ -118,7 +118,34 @@ function showMessage(message, type = 'info') {
   setTimeout(() => toast.remove(), 4000);
 }
 
+function showSupportBanner(message, type = 'error') {
+  if (!message) return;
+
+  const existingBanner = document.getElementById('wimpschool-support-banner');
+  if (existingBanner) {
+    existingBanner.remove();
+  }
+
+  const banner = document.createElement('div');
+  banner.id = 'wimpschool-support-banner';
+  banner.className = `support-banner support-banner-${type}`;
+  banner.innerHTML = `
+    <div class="support-banner__content">
+      <strong>Need help?</strong>
+      <span>${message}</span>
+    </div>
+    <div class="support-banner__actions">
+      <a href="support.html" class="support-banner__link">Contact support</a>
+      <button type="button" class="support-banner__close" aria-label="Dismiss support banner">×</button>
+    </div>
+  `;
+
+  document.body.prepend(banner);
+  banner.querySelector('.support-banner__close')?.addEventListener('click', () => banner.remove());
+}
+
 window.showMessage = window.showMessage || showMessage;
+window.showSupportBanner = window.showSupportBanner || showSupportBanner;
 
 async function rehydrateSessionFromSupabase() {
   try {
@@ -201,6 +228,12 @@ function clearSession() {
 function redirectToDashboard(role) {
   const target = getRoleRedirect(role);
   window.location.href = target;
+}
+
+function ensureRoleAccess(requiredRole, sessionRole) {
+  if (!requiredRole) return true;
+  if (!sessionRole) return false;
+  return sessionRole === requiredRole || sessionRole === 'super_admin';
 }
 
 function attachLogoutHandlers() {
@@ -1292,6 +1325,9 @@ async function registerSchool(payload) {
           console.warn('ensureUserRole warning:', ensure.error);
           const msg = ensure.error.message || (ensure.error && ensure.error.toString()) || 'Unable to create role for the account.';
           showMessage(`Role setup warning: ${msg}`, 'error');
+          if (typeof window.showSupportBanner === 'function') {
+            window.showSupportBanner(`Role setup needs attention: ${msg}. Contact support if you cannot sign in after registration.`, 'error');
+          }
         }
       } catch (err) {
         console.warn('ensureUserRole exception:', err);
@@ -1439,9 +1475,9 @@ async function enforcePageRole() {
   }
 
   const currentRole = roleResult.data.role || sessionInfo.data.session.user.user_metadata?.role;
-  if (currentRole !== requiredRole) {
+  if (!ensureRoleAccess(requiredRole, currentRole)) {
     showMessage('Access denied. Redirecting to your correct portal.', 'error');
-    window.location.href = getRoleRedirect(currentRole);
+    window.location.href = getRoleRedirect(currentRole || 'school_admin');
     return false;
   }
 

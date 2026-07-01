@@ -178,6 +178,35 @@ async function ensureUserRole(userId, role = 'school_admin', schoolId = null) {
   }
 }
 
+function getAuthRecoveryMessage(error) {
+  const code = error?.code || error?.status || '';
+  const message = String(error?.message || '').toLowerCase();
+
+  if (code === 'invalid_credentials' || message.includes('invalid login credentials') || message.includes('invalid_grant')) {
+    return 'Your email or password is incorrect. Please try again or use the password reset option.';
+  }
+
+  if (message.includes('email not confirmed') || message.includes('signup requires')) {
+    return 'Please check your inbox and confirm your email before signing in.';
+  }
+
+  if (message.includes('network') || message.includes('fetch failed')) {
+    return 'We could not reach the sign-in service. Please check your connection and try again.';
+  }
+
+  if (message.includes('user_roles') || message.includes('row level security')) {
+    return 'Your account role is not ready yet. Please contact the school administrator or support team.';
+  }
+
+  return error?.message || 'Unable to sign in. Please try again.';
+}
+
+function showAuthSupportBanner(message) {
+  if (typeof window !== 'undefined' && typeof window.showSupportBanner === 'function') {
+    window.showSupportBanner(message || 'Need help signing in? Contact support so we can assist you quickly.', 'error');
+  }
+}
+
 async function signIn(email, password) {
   const client = getSupabase();
   if (!client) {
@@ -191,7 +220,9 @@ async function signIn(email, password) {
     });
 
     if (authError) {
-      return { error: authError };
+      const recoveryMessage = getAuthRecoveryMessage(authError);
+      showAuthSupportBanner(recoveryMessage);
+      return { error: { ...authError, message: recoveryMessage } };
     }
 
     // Persist Supabase session into the client storage so auth.getSession() works
@@ -222,7 +253,9 @@ async function signIn(email, password) {
     };
   } catch (err) {
     console.error('signIn error:', err);
-    return { error: { message: err?.message || 'Unable to sign in. Check your network connection.' } };
+    const recoveryMessage = err?.message || 'Unable to sign in. Check your network connection.';
+    showAuthSupportBanner(recoveryMessage);
+    return { error: { message: recoveryMessage } };
   }
 }
 
@@ -317,6 +350,17 @@ async function sendPasswordReset(email) {
   return { data, error };
 }
 
+function getInviteRecoveryMessage(error) {
+  const message = String(error?.message || '').toLowerCase();
+  if (message.includes('invalid') || message.includes('expired')) {
+    return 'This invite link is invalid or has expired. Please ask the school administrator to send a new invite.';
+  }
+  if (message.includes('network') || message.includes('fetch failed')) {
+    return 'We could not verify the invite right now. Please check your connection and try again.';
+  }
+  return error?.message || 'Unable to verify this invite.';
+}
+
 async function verifyInviteToken(token) {
   if (!token) {
     return { error: { message: 'Invite token is missing.' } };
@@ -337,6 +381,10 @@ async function verifyInviteToken(token) {
     return { data: { ...parent, role: 'parent' } };
   }
 
+  if (parentError && !parentError.message?.includes('No rows found')) {
+    return { error: { message: getInviteRecoveryMessage(parentError) } };
+  }
+
   const { data: teacher, error: teacherError } = await client
     .from('teachers')
     .select('id, name, email, subjects, classes, invite_token, account_created, school_id')
@@ -345,6 +393,10 @@ async function verifyInviteToken(token) {
 
   if (teacher && !teacherError) {
     return { data: { ...teacher, role: 'teacher' } };
+  }
+
+  if (teacherError && !teacherError.message?.includes('No rows found')) {
+    return { error: { message: getInviteRecoveryMessage(teacherError) } };
   }
 
   return { error: { message: 'Invalid or expired invite token.' } };

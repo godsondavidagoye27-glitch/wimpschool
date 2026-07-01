@@ -672,6 +672,54 @@ input:focus, select:focus, textarea:focus {
   animation: slideUp 0.3s ease;
 }
 
+.support-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px;
+  border-bottom: 2px solid rgba(230,58,46,.2);
+  background: #fff4f3;
+  color: var(--text);
+  box-shadow: 0 12px 32px rgba(26,31,94,.08);
+}
+
+.support-banner__content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+}
+
+.support-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.support-banner__link {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.support-banner__close {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.support-banner-error {
+  background: #fff4f3;
+}
+
 .toast-info {
   background: #1a1f5e;
   color: #fff;

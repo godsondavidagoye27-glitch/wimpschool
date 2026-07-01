@@ -246,7 +246,7 @@ async function createAnnouncement(payload) {
 }
 
 async function recordPayment(payload) {
-  const { data, error } = await supabase.from('payments').insert([
+  const attemptInsert = async () => supabase.from('payments').insert([
     {
       student_id: payload.studentId,
       parent_id: payload.parentId,
@@ -261,6 +261,17 @@ async function recordPayment(payload) {
       processed_at: new Date().toISOString()
     }
   ]).select().single();
+
+  let result = await attemptInsert();
+
+  if (result.error && result.error.code === '23505' && payload.txRef) {
+    const retryResult = await supabase.from('payments').select('id, status').eq('tx_ref', payload.txRef).limit(1).maybeSingle();
+    if (!retryResult.error && retryResult.data) {
+      return { data: retryResult.data, error: null };
+    }
+  }
+
+  const { data, error } = result;
 
   if (!error && data) {
     await sendSchoolNotification({
