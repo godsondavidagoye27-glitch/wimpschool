@@ -593,6 +593,20 @@ async function registerSchool(payload) {
       return;
     }
 
+    // Ensure the user_roles entry exists for the newly created admin
+    (async () => {
+      try {
+        const userId = result.data.user.id;
+        const schoolId = result.data.schoolId;
+        const ensure = await ensureUserRole(userId, 'school_admin', schoolId);
+        if (ensure.error) {
+          console.warn('ensureUserRole warning:', ensure.error);
+        }
+      } catch (err) {
+        console.warn('ensureUserRole exception:', err);
+      }
+    })();
+
     showMessage('School registered! Check your email to verify.', 'success');
     setTimeout(() => {
       window.location.href = 'login.html';

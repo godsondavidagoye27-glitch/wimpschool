@@ -123,6 +123,49 @@ async function fetchUserRole(userId) {
   }
 }
 
+async function ensureUserRole(userId, role = 'school_admin', schoolId = null) {
+  const client = getSupabase();
+  if (!client) {
+    return { error: { message: 'Supabase is not initialized. Cannot ensure user role.' } };
+  }
+
+  try {
+    const { data: existing, error: selectError } = await client
+      .from('user_roles')
+      .select('id')
+      .eq('user_id', userId)
+      .limit(1);
+
+    if (selectError) {
+      console.error('ensureUserRole select error:', selectError);
+      return { error: selectError };
+    }
+
+    if (Array.isArray(existing) && existing.length > 0) {
+      return { data: { exists: true } };
+    }
+
+    const payload = { user_id: userId, role };
+    if (schoolId) payload.school_id = schoolId;
+
+    const { data: inserted, error: insertError } = await client
+      .from('user_roles')
+      .insert([payload])
+      .select('id, user_id, role, school_id')
+      .single();
+
+    if (insertError) {
+      console.error('ensureUserRole insert error:', insertError);
+      return { error: insertError };
+    }
+
+    return { data: inserted };
+  } catch (err) {
+    console.error('ensureUserRole exception:', err);
+    return { error: { message: err?.message || 'Unable to ensure user role.' } };
+  }
+}
+
 async function signIn(email, password) {
   const client = getSupabase();
   if (!client) {
