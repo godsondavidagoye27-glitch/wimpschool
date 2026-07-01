@@ -9,13 +9,49 @@ function setTextContentById(id, text) {
   }
 }
 
-function applySchoolBrandingPreview({ schoolName, primaryColor }) {
-  const brandEl = document.querySelector('.brand');
-  if (brandEl && schoolName) {
-    brandEl.textContent = schoolName;
-  }
+function applySchoolBrandingPreview({ schoolName, primaryColor, schoolLogoUrl }) {
+  document.querySelectorAll('.brand').forEach(brandEl => {
+    if (brandEl && schoolName) {
+      brandEl.textContent = schoolName;
+    }
+  });
+
   if (primaryColor) {
     document.documentElement.style.setProperty('--accent', primaryColor);
+  }
+
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+  if (themeMeta && primaryColor) {
+    themeMeta.setAttribute('content', primaryColor);
+  }
+
+  if (schoolLogoUrl) {
+    document.querySelectorAll('.brand').forEach(brandEl => {
+      if (!brandEl.dataset.logoApplied) {
+        brandEl.insertAdjacentHTML('afterbegin', `<img src="${schoolLogoUrl}" alt="school logo" style="width:24px;height:24px;border-radius:999px;object-fit:cover;margin-right:8px;" />`);
+        brandEl.dataset.logoApplied = 'true';
+      }
+    });
+  }
+}
+
+async function applySavedSchoolBranding() {
+  const session = loadSession();
+  const client = window.getSupabase ? window.getSupabase() : null;
+  if (!session?.schoolId || !client) return;
+
+  const { data, error } = await client
+    .from('schools')
+    .select('name, logo_url, primary_color')
+    .eq('id', session.schoolId)
+    .single();
+
+  if (!error && data) {
+    applySchoolBrandingPreview({
+      schoolName: data.name,
+      primaryColor: data.primary_color,
+      schoolLogoUrl: data.logo_url
+    });
   }
 }
 
@@ -24,6 +60,7 @@ window.addEventListener('load', async () => {
   listenInstallPrompt();
   // Rehydrate session from Supabase if available before enforcing role
   await rehydrateSessionFromSupabase();
+  await applySavedSchoolBranding();
   const allowed = await enforcePageRole();
   if (!allowed) {
     return;

@@ -74,6 +74,12 @@ Later enhancements can include:
 ### School admin dashboard
 - `js/dashboard.js` loads student counts, teacher counts, fee stats, and chart data
 - the dashboard uses `school-admin-dashboard.html` role protection
+- Added an Elite analytics widget section for attendance rate, fee recovery, and average score
+
+### Admin settings
+- `admin-settings.html` now includes school profile, contact, fee, grading, subscription, and branding forms
+- `js/app.js` loads and saves settings to the `schools` table, including plan upgrade scheduling
+- Branding preview is applied via `applySchoolBrandingPreview()` and persists to the database
 
 ### Teacher flow
 - `results.html` allows both single result entry and CSV bulk upload
@@ -85,12 +91,13 @@ Later enhancements can include:
 - `js/app.js` fetches parent and student records for the logged-in parent
 
 ## What to improve next
-- Add mobile-responsive layout for all pages
-- Implement a richer pricing page with plan comparisons and benefits
-- Add email and SMS notifications for invites and payment reminders
-- Add school branding and logo customization
-- Build analytics and reporting widgets for Elite clients
-- Add stronger RLS rules and Supabase policies for production security
+- Complete mobile-responsive layout and spacing across all pages
+- Finish the richer pricing page with actual plan comparison details and Elite positioning
+- Add email/SMS notifications for invites, payment reminders, and plan upgrade alerts
+- Expand school branding support into the parent portal and login/dashboard themes
+- Implement strong Supabase RLS rules and production-ready policies
+- Add backend-driven analytics, reporting exports, and Elite client dashboards
+- Validate settings persistence with end-to-end UI testing and data flow checks
 
 ## Notes for pitching
 - Emphasize role separation: admins, teachers, and parents never share views

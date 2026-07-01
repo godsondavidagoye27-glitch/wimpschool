@@ -34,6 +34,7 @@
       <div class="dashboard-actions">
         <a href="student-management.html" class="btn btn-primary">Add student</a>
         <a href="#attendance" class="btn btn-secondary">Record attendance</a>
+        <button type="button" id="exportDashboardSummary" class="btn btn-secondary">Export summary</button>
       </div>
     </section>
 
@@ -58,6 +59,20 @@
         <h3>Plan upgrade status</h3>
         <p id="planUpgradeStatus">—</p>
       </article>
+    </section>
+
+    <section class="analytics-panel">
+      <div class="section-heading">
+        <span class="eyebrow">Recent activity</span>
+        <h2>Notifications and updates</h2>
+        <p>Recent invites, payments, and system alerts from your school.</p>
+      </div>
+      <div id="dashboardNotifications" class="dashboard-notifications">
+        <article class="notice-card">
+          <h3>Loading notifications…</h3>
+          <p>Recent alerts will appear here as soon as they are available.</p>
+        </article>
+      </div>
     </section>
 
     <section class="charts-panel">

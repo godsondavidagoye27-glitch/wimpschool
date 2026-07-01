@@ -155,15 +155,11 @@ async function inviteTeacher(payload) {
     return { error };
   }
 
-  await supabase.from('notifications').insert([
-    {
-      user_id: null,
-      school_id: payload.schoolId,
-      type: 'invite',
-      message: `Teacher invite created for ${payload.email}`,
-      read: false
-    }
-  ]);
+  await sendSchoolNotification({
+    schoolId: payload.schoolId,
+    type: 'invite',
+    message: `Teacher invite sent to ${payload.email}`
+  });
 
   return { data, token: inviteToken };
 }
@@ -186,15 +182,11 @@ async function inviteParent(payload) {
     return { error };
   }
 
-  await supabase.from('notifications').insert([
-    {
-      user_id: null,
-      school_id: payload.schoolId,
-      type: 'invite',
-      message: `Parent invite created for ${payload.email}`,
-      read: false
-    }
-  ]);
+  await sendSchoolNotification({
+    schoolId: payload.schoolId,
+    type: 'invite',
+    message: `Parent invite sent to ${payload.email}`
+  });
 
   return { data, token: inviteToken };
 }
@@ -259,6 +251,14 @@ async function recordPayment(payload) {
     }
   ]).select().single();
 
+  if (!error && data) {
+    await sendSchoolNotification({
+      schoolId: payload.schoolId,
+      type: payload.status === 'paid' ? 'payment' : 'payment_pending',
+      message: `Payment ${payload.status || 'recorded'} for ₦${Number(payload.amount || 0)}`
+    });
+  }
+
   return { data, error };
 }
 
@@ -278,6 +278,17 @@ async function sendSchoolNotification(payload) {
       created_at: new Date().toISOString()
     }
   ]).select().single();
+
+  return { data, error };
+}
+
+async function getSchoolNotifications(schoolId, limit = 6) {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('id, message, type, created_at, read')
+    .eq('school_id', schoolId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
 
   return { data, error };
 }

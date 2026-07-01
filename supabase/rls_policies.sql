@@ -126,6 +126,66 @@ CREATE POLICY "Service role can read announcements" ON announcements
   TO service_role
   USING (true);
 
+-- Additional write policies for authenticated school members
+CREATE POLICY "School members can update their school" ON schools
+  FOR UPDATE
+  TO authenticated
+  USING (id IN (SELECT school_id FROM user_roles WHERE user_id = auth.uid()))
+  WITH CHECK (id IN (SELECT school_id FROM user_roles WHERE user_id = auth.uid()));
+
+CREATE POLICY "School members can insert students" ON students
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (school_id IN (SELECT school_id FROM user_roles WHERE user_id = auth.uid()));
+
+CREATE POLICY "School members can update students" ON students
+  FOR UPDATE
+  TO authenticated
+  USING (school_id IN (SELECT school_id FROM user_roles WHERE user_id = auth.uid()))
+  WITH CHECK (school_id IN (SELECT school_id FROM user_roles WHERE user_id = auth.uid()));
+
+CREATE POLICY "School members can insert teachers" ON teachers
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (school_id IN (SELECT school_id FROM user_roles WHERE user_id = auth.uid()));
+
+CREATE POLICY "School members can update teachers" ON teachers
+  FOR UPDATE
+  TO authenticated
+  USING (school_id IN (SELECT school_id FROM user_roles WHERE user_id = auth.uid()))
+  WITH CHECK (school_id IN (SELECT school_id FROM user_roles WHERE user_id = auth.uid()));
+
+CREATE POLICY "School members can insert announcements" ON announcements
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (school_id IN (SELECT school_id FROM user_roles WHERE user_id = auth.uid()));
+
+CREATE POLICY "School members can update announcements" ON announcements
+  FOR UPDATE
+  TO authenticated
+  USING (school_id IN (SELECT school_id FROM user_roles WHERE user_id = auth.uid()))
+  WITH CHECK (school_id IN (SELECT school_id FROM user_roles WHERE user_id = auth.uid()));
+
+CREATE POLICY "School members can insert attendance" ON attendance
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (school_id IN (SELECT school_id FROM user_roles WHERE user_id = auth.uid()));
+
+CREATE POLICY "School members can insert results" ON results
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (school_id IN (SELECT school_id FROM user_roles WHERE user_id = auth.uid()));
+
+CREATE POLICY "School members can insert payments" ON payments
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (school_id IN (SELECT school_id FROM user_roles WHERE user_id = auth.uid()));
+
+CREATE POLICY "School members can insert notifications" ON notifications
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (school_id IN (SELECT school_id FROM user_roles WHERE user_id = auth.uid()));
+
 -- Note: The policies above use "service_role" for backend operations.
 -- If you're using anon key from browser, you may need to adjust policies
 -- to allow anon users initially or use a custom JWT claim for roles.

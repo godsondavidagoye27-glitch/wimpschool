@@ -52,6 +52,77 @@ function formatCurrencyShort(val) {
   return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(Number(val || 0));
 }
 
+async function fetchSchoolNotifications(limit = 6) {
+  const client = window.getSupabase ? window.getSupabase() : null;
+  const schoolId = getSavedSchoolId();
+  if (!client || !schoolId) {
+    return [];
+  }
+
+  const { data, error } = await client
+    .from('notifications')
+    .select('message, type, created_at')
+    .eq('school_id', schoolId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  return error ? [] : (data || []);
+}
+
+async function renderNotificationsWidget() {
+  const container = document.getElementById('dashboardNotifications');
+  if (!container) return;
+
+  const notifications = await fetchSchoolNotifications();
+  if (!notifications.length) {
+    container.innerHTML = '<article class="notification-item"><strong>No notifications yet</strong><p>Invites, payments, and alerts will appear here.</p></article>';
+    return;
+  }
+
+  container.innerHTML = notifications.map(item => `
+    <article class="notification-item">
+      <strong>${item.type || 'update'}</strong>
+      <p>${item.message || 'New update available.'}</p>
+      <p>${item.created_at ? new Date(item.created_at).toLocaleString() : ''}</p>
+    </article>
+  `).join('');
+}
+
+async function exportDashboardSummary() {
+  const client = window.getSupabase ? window.getSupabase() : null;
+  const schoolId = getSavedSchoolId();
+  if (!client || !schoolId) return;
+
+  const [studentsResult, teachersResult, paymentsResult] = await Promise.all([
+    client.from('students').select('id').eq('school_id', schoolId),
+    client.from('teachers').select('id').eq('school_id', schoolId),
+    client.from('payments').select('amount, status').eq('school_id', schoolId)
+  ]);
+
+  const totalStudents = studentsResult.data?.length || 0;
+  const totalTeachers = teachersResult.data?.length || 0;
+  const payments = paymentsResult.data || [];
+  const paidTotal = payments.filter(item => item.status === 'paid').reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const outstandingTotal = payments.filter(item => item.status !== 'paid').reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+  const rows = [
+    ['metric', 'value'],
+    ['students', totalStudents],
+    ['teachers', totalTeachers],
+    ['fees_paid', paidTotal],
+    ['fees_outstanding', outstandingTotal]
+  ];
+
+  const csv = rows.map(row => row.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = 'wimpschool-dashboard-summary.csv';
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 async function renderRecentPayments() {
   const paymentsList = document.getElementById('recentPaymentsList');
   const client = window.getSupabase ? window.getSupabase() : null;
@@ -314,4 +385,6 @@ window.addEventListener('load', () => {
   renderRecentPayments();
   renderFeeChart();
   renderEliteAnalytics();
+  renderNotificationsWidget();
+  document.getElementById('exportDashboardSummary')?.addEventListener('click', exportDashboardSummary);
 });
