@@ -661,12 +661,25 @@ async function enforcePageRole() {
 
   const client = window.getSupabase ? window.getSupabase() : null;
   if (!client) {
+    // If Supabase client isn't available, try to recover from local session
+    const fallback = loadSession();
+    if (fallback) {
+      showProtectedContent();
+      return true;
+    }
     window.location.href = 'login.html';
     return false;
   }
 
   const sessionInfo = await client.auth.getSession();
   if (!sessionInfo?.data?.session?.user) {
+    // Supabase client has no session stored (possible multiple client instances or race).
+    // Fall back to our stored session if present to avoid redirect loops.
+    const fallback = loadSession();
+    if (fallback) {
+      showProtectedContent();
+      return true;
+    }
     window.location.href = 'login.html';
     return false;
   }
