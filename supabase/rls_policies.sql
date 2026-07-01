@@ -1,0 +1,135 @@
+-- WimpSchool RLS (Row Level Security) Policies
+-- Run these SQL commands in Supabase SQL Editor to enable secure access control
+
+-- Enable RLS on user_roles table
+ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
+
+-- Policy 1: Allow authenticated users to read their own role
+CREATE POLICY "Users can read own role" ON user_roles
+  FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+-- Policy 2: Allow service role (backend) to read all roles
+CREATE POLICY "Service role can read all roles" ON user_roles
+  FOR SELECT
+  TO service_role
+  USING (true);
+
+-- Policy 3: Allow service role to insert roles
+CREATE POLICY "Service role can insert roles" ON user_roles
+  FOR INSERT
+  TO service_role
+  WITH CHECK (true);
+
+-- Policy 4: Allow service role to update roles
+CREATE POLICY "Service role can update roles" ON user_roles
+  FOR UPDATE
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+-- Enable RLS on schools table
+ALTER TABLE schools ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Allow authenticated users to read their school
+CREATE POLICY "Users can read their school" ON schools
+  FOR SELECT
+  TO authenticated
+  USING (
+    id IN (
+      SELECT school_id FROM user_roles WHERE user_id = auth.uid()
+    )
+  );
+
+-- Policy: Service role can read all schools
+CREATE POLICY "Service role can read schools" ON schools
+  FOR SELECT
+  TO service_role
+  USING (true);
+
+-- Policy: Service role can insert schools
+CREATE POLICY "Service role can insert schools" ON schools
+  FOR INSERT
+  TO service_role
+  WITH CHECK (true);
+
+-- Enable RLS on students table
+ALTER TABLE students ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Allow authenticated users to read students in their school
+CREATE POLICY "Users can read school students" ON students
+  FOR SELECT
+  TO authenticated
+  USING (
+    school_id IN (
+      SELECT school_id FROM user_roles WHERE user_id = auth.uid()
+    )
+  );
+
+-- Policy: Service role can read all students
+CREATE POLICY "Service role can read students" ON students
+  FOR SELECT
+  TO service_role
+  USING (true);
+
+-- Enable RLS on teachers table
+ALTER TABLE teachers ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Allow authenticated users to read teachers in their school
+CREATE POLICY "Users can read school teachers" ON teachers
+  FOR SELECT
+  TO authenticated
+  USING (
+    school_id IN (
+      SELECT school_id FROM user_roles WHERE user_id = auth.uid()
+    )
+  );
+
+-- Policy: Service role can manage teachers
+CREATE POLICY "Service role can read teachers" ON teachers
+  FOR SELECT
+  TO service_role
+  USING (true);
+
+-- Enable RLS on parents table
+ALTER TABLE parents ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Allow parents to read own record
+CREATE POLICY "Parents can read own record" ON parents
+  FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+-- Policy: Service role can manage parents
+CREATE POLICY "Service role can read parents" ON parents
+  FOR SELECT
+  TO service_role
+  USING (true);
+
+-- Enable RLS on announcements table
+ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Allow authenticated users to read announcements in their school
+CREATE POLICY "Users can read school announcements" ON announcements
+  FOR SELECT
+  TO authenticated
+  USING (
+    school_id IN (
+      SELECT school_id FROM user_roles WHERE user_id = auth.uid()
+    )
+  );
+
+-- Policy: Service role can read/manage announcements
+CREATE POLICY "Service role can read announcements" ON announcements
+  FOR SELECT
+  TO service_role
+  USING (true);
+
+-- Note: The policies above use "service_role" for backend operations.
+-- If you're using anon key from browser, you may need to adjust policies
+-- to allow anon users initially or use a custom JWT claim for roles.
+-- For browser access during development, consider temporarily disabling RLS
+-- or using a more permissive policy on user_roles:
+--
+-- ALTER TABLE user_roles DISABLE ROW LEVEL SECURITY;
