@@ -85,28 +85,27 @@ async function fetchUserRole(userId) {
   }
 
   try {
+    // Use a normal select without .single() to handle empty results gracefully
     const { data, error } = await client
       .from('user_roles')
       .select('role, school_id')
-      .eq('user_id', userId)
-      .single();
+      .eq('user_id', userId);
 
     if (error) {
-      // Ignore "no rows" error - just return null data
-      if (error.details !== 'Results contain 0 rows') {
-        console.error('fetchUserRole error:', error);
-        // Show banner for permission/RLS errors
-        if (error.code === 'PGRST116' || error.status === 406 || error.status === 403) {
-          const msg = 'Supabase user_roles table is not accessible. Admin: disable RLS on user_roles in Supabase dashboard or run: ALTER TABLE user_roles DISABLE ROW LEVEL SECURITY;';
-          if (window.wimpSchoolRenderConfigError) {
-            window.wimpSchoolRenderConfigError(msg);
-          }
+      console.error('fetchUserRole error:', error);
+      // Show banner for permission/RLS errors
+      if (error.code === 'PGRST116' || error.status === 406 || error.status === 403) {
+        const msg = 'Supabase user_roles table is not accessible. Admin: disable RLS on user_roles in Supabase dashboard or run: ALTER TABLE user_roles DISABLE ROW LEVEL SECURITY;';
+        if (window.wimpSchoolRenderConfigError) {
+          window.wimpSchoolRenderConfigError(msg);
         }
-        return { error };
       }
+      return { error };
     }
 
-    return { data: data || null };
+    // Get the first record if it exists, otherwise return null
+    const record = Array.isArray(data) && data.length > 0 ? data[0] : null;
+    return { data: record };
   } catch (err) {
     console.error('fetchUserRole exception:', err);
     return { error: { message: err?.message || 'Failed to fetch user role.' } };
