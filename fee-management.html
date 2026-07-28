@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fee Management | WimpSchool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="favicon.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#e63a2e" />
+</head>
+<body data-required-role="school_admin" data-page="fee-management" class="hide-until-auth">
+  <header class="dashboard-header">
+    <div class="brand">WimpSchool</div>
+    <nav class="dashboard-nav">
+      <a href="school-admin-dashboard.html">Dashboard</a>
+      <a href="student-management.html">Students</a>
+      <a href="index.html" data-logout class="btn btn-secondary small">Logout</a>
+    </nav>
+  </header>
+
+  <main class="dashboard-main">
+    <section class="dashboard-hero">
+      <div>
+        <span class="eyebrow">Fee management</span>
+        <h1>Track payments and outstanding balances</h1>
+        <p>Configure class fees, record installments, and view payment status across the school.</p>
+      </div>
+      <div class="dashboard-actions">
+        <a href="#fees" class="btn btn-primary">Review fees</a>
+      </div>
+    </section>
+
+    <section class="cards-row" id="fees">
+      <article class="list-card">
+        <h2>Class fee setup</h2>
+        <p>Set fee amounts per class in a simple JSON mapping. Parents will see this instantly in their portal.</p>
+        <form id="classFeeForm">
+          <label>Class fee mapping</label>
+          <textarea id="classFeeConfig" rows="8" placeholder='{"Nursery 1": 15000, "JSS1": 25000, "SS1": 30000}'></textarea>
+          <button type="submit" class="btn btn-primary">Save class fees</button>
+          <p id="classFeeStatus" class="form-note">Use a JSON object with class names as keys and fee amounts as values.</p>
+        </form>
+      </article>
+      <article class="list-card">
+        <h2>Payment history</h2>
+        <div id="feeHistory">View receipt records, outstanding balances, and payment categories.</div>
+      </article>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config-checker.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/backend.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    // Get school ID from session
+    function getSavedSchoolId() {
+      const raw = sessionStorage.getItem('wimpschoolUser') || localStorage.getItem('wimpschoolUser');
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw)?.schoolId || null;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function formatCurrencyShort(val) {
+      return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(Number(val || 0));
+    }
+
+    // Load payment history
+    async function loadPaymentHistory() {
+      const feeHistory = document.getElementById('feeHistory');
+      if (!feeHistory) return;
+
+      const client = window.getSupabase ? window.getSupabase() : null;
+      const schoolId = getSavedSchoolId();
+      
+      if (!client || !schoolId) {
+        feeHistory.innerHTML = '<p>Unable to load payment history.</p>';
+        return;
+      }
+
+      const { data: payments, error } = await client
+        .from('payments')
+        .select('id, amount, status, method, student_id, created_at')
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error || !payments?.length) {
+        feeHistory.innerHTML = '<p>No payment records yet.</p>';
+        return;
+      }
+
+      // Get student names
+      const studentIds = [...new Set(payments.map(p => p.student_id).filter(Boolean))];
+      let studentMap = new Map();
+      
+      if (studentIds.length) {
+        const { data: students } = await client
+          .from('students')
+          .select('id, name, student_code')
+          .in('id', studentIds);
+        
+        studentMap = new Map((students || []).map(s => [s.id, `${s.name} (${s.student_code})`]));
+      }
+
+      const formatDate = (dateStr) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString();
+      };
+
+      const statusColor = (status) => {
+        switch(status) {
+          case 'success': return '#10b981';
+          case 'pending': return '#f59e0b';
+          case 'failed': return '#e63a2e';
+          default: return '#666';
+        }
+      };
+
+      const html = `
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="border-bottom: 2px solid #e63a2e;">
+              <th style="text-align: left; padding: 8px;">Student</th>
+              <th style="text-align: left; padding: 8px;">Amount</th>
+              <th style="text-align: left; padding: 8px;">Method</th>
+              <th style="text-align: left; padding: 8px;">Status</th>
+              <th style="text-align: left; padding: 8px;">Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${payments.map(payment => `
+              <tr style="border-bottom: 1px solid #ddd;">
+                <td style="padding: 8px;">${studentMap.get(payment.student_id) || 'Unknown'}</td>
+                <td style="padding: 8px; font-weight: bold;">${formatCurrencyShort(payment.amount)}</td>
+                <td style="padding: 8px;">${payment.method || '—'}</td>
+                <td style="padding: 8px; color: ${statusColor(payment.status)}; font-weight: bold;">${payment.status || 'unknown'}</td>
+                <td style="padding: 8px;">${formatDate(payment.created_at)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+      feeHistory.innerHTML = html;
+    }
+
+    // Load on page load
+    window.addEventListener('load', loadPaymentHistory);
+  </script>
+</body>
+</html>

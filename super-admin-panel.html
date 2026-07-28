@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Super Admin Panel | WimpSchool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="favicon.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#e63a2e" />
+</head>
+<body data-required-role="super_admin" class="hide-until-auth">
+  <header class="dashboard-header">
+    <div class="brand">WimpSchool</div>
+    <nav class="dashboard-nav">
+      <a href="index.html">Home</a>
+      <a href="admin.html" data-logout class="btn btn-secondary small">Logout</a>
+    </nav>
+  </header>
+
+  <main class="dashboard-main">
+    <section class="dashboard-hero">
+      <div>
+        <span class="eyebrow">Super admin</span>
+        <h1>Platform overview</h1>
+        <p>Manage schools, subscriptions, revenue and support from the platform owner panel.</p>
+      </div>
+    </section>
+
+    <section class="stat-grid">
+      <article class="stat-card">
+        <h3>Registered schools</h3>
+        <p>124</p>
+      </article>
+      <article class="stat-card">
+        <h3>Monthly revenue</h3>
+        <p>₦2,320,000</p>
+      </article>
+      <article class="stat-card">
+        <h3>Active subscriptions</h3>
+        <p>98</p>
+      </article>
+      <article class="stat-card">
+        <h3>Support tickets</h3>
+        <p>7 open</p>
+      </article>
+    </section>
+
+    <section class="cards-row">
+      <article class="info-card">
+        <h2>Platform analytics</h2>
+        <p>Compare new school signups, revenue growth and active user activity across the network.</p>
+      </article>
+      <article class="info-card">
+        <h2>School management</h2>
+        <p>Approve new school registrations, suspend accounts, or review verification status.</p>
+      </article>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config-checker.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Attendance Tracking | WimpSchool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="favicon.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#e63a2e" />
+</head>
+<body data-required-role="teacher" data-page="attendance" class="hide-until-auth">
+  <header class="dashboard-header">
+    <div class="brand">WimpSchool</div>
+    <nav class="dashboard-nav">
+      <a href="teacher-dashboard.html">Dashboard</a>
+      <a href="results.html">Results</a>
+      <a href="index.html" data-logout class="btn btn-secondary small">Logout</a>
+    </nav>
+  </header>
+
+  <main class="dashboard-main">
+    <section class="dashboard-hero">
+      <div>
+        <span class="eyebrow">Attendance tracking</span>
+        <h1>Record daily attendance with ease</h1>
+        <p>Mark present, absent, and late students, and review attendance summaries by class.</p>
+      </div>
+      <div class="dashboard-actions">
+        <a href="#mark" class="btn btn-primary">Take attendance</a>
+      </div>
+    </section>
+
+    <section class="cards-row" id="mark">
+      <article class="list-card">
+        <h2>Mark attendance</h2>
+        <p id="attendanceActionText">Select a class and record attendance for today.</p>
+      </article>
+      <article class="list-card">
+        <h2>Attendance report</h2>
+        <ul id="attendanceDetailsList">
+          <li>Loading attendance summary…</li>
+        </ul>
+      </article>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config-checker.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/backend.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    // Get school ID from session
+    function getSavedSchoolId() {
+      const raw = sessionStorage.getItem('wimpschoolUser') || localStorage.getItem('wimpschoolUser');
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw)?.schoolId || null;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    // Get user info from session
+    function getSavedUser() {
+      const raw = sessionStorage.getItem('wimpschoolUser') || localStorage.getItem('wimpschoolUser');
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw);
+      } catch (err) {
+        return null;
+      }
+    }
+
+    // Fetch classes for this teacher and load students to mark attendance
+    async function loadAttendanceUI() {
+      const actionText = document.getElementById('attendanceActionText');
+      if (!actionText) return;
+
+      const client = window.getSupabase ? window.getSupabase() : null;
+      const schoolId = getSavedSchoolId();
+      const user = getSavedUser();
+      
+      if (!client || !schoolId || !user?.id) {
+        actionText.innerHTML = '<p>Unable to load attendance interface.</p>';
+        return;
+      }
+
+      // First, get the teacher record
+      const { data: teachers, error: teacherError } = await client
+        .from('teachers')
+        .select('id, classes')
+        .eq('school_id', schoolId)
+        .eq('email', user.email)
+        .single();
+
+      if (teacherError || !teachers) {
+        actionText.innerHTML = '<p>Teacher record not found.</p>';
+        return;
+      }
+
+      const teacherId = teachers.id;
+      const classesString = teachers.classes || '';
+      const classes = classesString.split(',').map(c => c.trim()).filter(Boolean) || [];
+
+      if (!classes.length) {
+        actionText.innerHTML = '<p>No classes assigned yet. Contact school admin.</p>';
+        return;
+      }
+
+      // Build UI to select class and mark attendance
+      const classOptions = classes.map((className, idx) => `<option value="${className}">${className}</option>`).join('');
+      
+      const html = `
+        <form id="attendanceForm">
+          <label>Select class</label>
+          <select id="attendanceClassSelect" required>
+            <option value="">-- Select a class --</option>
+            ${classOptions}
+          </select>
+          <div id="studentMarkingArea"></div>
+          <button type="submit" class="btn btn-primary" style="margin-top: 12px;">Record attendance</button>
+        </form>
+        <p id="attendanceFormStatus" class="form-note"></p>
+      `;
+      actionText.innerHTML = html;
+
+      // When class is selected, load students
+      const classSelect = document.getElementById('attendanceClassSelect');
+      if (classSelect) {
+        classSelect.addEventListener('change', async (e) => {
+          const selectedClass = e.target.value;
+          const studentArea = document.getElementById('studentMarkingArea');
+          if (!studentArea) return;
+
+          if (!selectedClass) {
+            studentArea.innerHTML = '';
+            return;
+          }
+
+          studentArea.innerHTML = '<p>Loading students...</p>';
+
+          const { data: students, error: studentsError } = await client
+            .from('students')
+            .select('id, name, student_code')
+            .eq('school_id', schoolId)
+            .eq('class_name', selectedClass)
+            .order('name');
+
+          if (studentsError || !students?.length) {
+            studentArea.innerHTML = '<p>No students in this class.</p>';
+            return;
+          }
+
+          const studentCheckboxes = students.map(student => `
+            <div style="margin: 8px 0;">
+              <label style="display: flex; align-items: center; gap: 8px;">
+                <input type="radio" name="student_${student.id}" value="present" checked data-student-id="${student.id}" />
+                <span style="flex: 1;">${student.name} (${student.student_code})</span>
+                <label style="display: inline; margin: 0;">
+                  <input type="radio" name="student_${student.id}" value="absent" data-student-id="${student.id}" />
+                  <span>Absent</span>
+                </label>
+                <label style="display: inline; margin: 0;">
+                  <input type="radio" name="student_${student.id}" value="late" data-student-id="${student.id}" />
+                  <span>Late</span>
+                </label>
+              </label>
+            </div>
+          `).join('');
+
+          studentArea.innerHTML = `
+            <label>Mark attendance for each student:</label>
+            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 12px; border-radius: 4px;">
+              ${studentCheckboxes}
+            </div>
+          `;
+        });
+      }
+
+      // Handle form submission
+      document.getElementById('attendanceForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const statusEl = document.getElementById('attendanceFormStatus');
+        const selectedClass = classSelect.value;
+
+        if (!selectedClass) {
+          statusEl.textContent = '❌ Please select a class.';
+          statusEl.style.color = '#e63a2e';
+          return;
+        }
+
+        statusEl.textContent = '⏳ Recording attendance...';
+        statusEl.style.color = '#1a1f5e';
+
+        // Collect attendance data
+        const studentCheckboxes = document.querySelectorAll('input[type="radio"]:checked');
+        let recordCount = 0;
+        let errorCount = 0;
+
+        for (const checkbox of studentCheckboxes) {
+          const studentId = checkbox.dataset.studentId;
+          const status = checkbox.value;
+
+          const result = await recordAttendance({
+            studentId,
+            teacherId,
+            schoolId,
+            className: selectedClass,
+            status
+          });
+
+          if (result.error) {
+            errorCount++;
+          } else {
+            recordCount++;
+          }
+        }
+
+        if (errorCount === 0) {
+          statusEl.textContent = `✅ Successfully recorded attendance for ${recordCount} students!`;
+          statusEl.style.color = '#10b981';
+        } else {
+          statusEl.textContent = `⚠️ Recorded ${recordCount} students, ${errorCount} failed.`;
+          statusEl.style.color = '#f59e0b';
+        }
+      });
+    }
+
+    // Load attendance summary
+    async function loadAttendanceSummary() {
+      const detailsList = document.getElementById('attendanceDetailsList');
+      if (!detailsList) return;
+
+      const client = window.getSupabase ? window.getSupabase() : null;
+      const schoolId = getSavedSchoolId();
+      
+      if (!client || !schoolId) {
+        detailsList.innerHTML = '<li>Unable to load attendance summary.</li>';
+        return;
+      }
+
+      const { data: records, error } = await client
+        .from('attendance')
+        .select('id, class, status, recorded_at')
+        .eq('school_id', schoolId)
+        .order('recorded_at', { ascending: false })
+        .limit(20);
+
+      if (error || !records?.length) {
+        detailsList.innerHTML = '<li>No attendance records yet.</li>';
+        return;
+      }
+
+      const formatDate = (dateStr) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      };
+
+      const html = records.map(record => `
+        <li>${record.class} — <strong>${record.status}</strong> — ${formatDate(record.recorded_at)}</li>
+      `).join('');
+
+      detailsList.innerHTML = html;
+    }
+
+    // Load when page loads
+    window.addEventListener('load', () => {
+      loadAttendanceUI();
+      loadAttendanceSummary();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "manifest_version": 2,
+  "package_name": "com.wimpschool.app",
+  "host": "wimpschool.com",
+  "name": "WimpSchool",
+  "launcher_name": "WimpSchool",
+  "icon": "icons/icon-512.svg",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "theme_color": "#e63a2e",
+  "navigation_color": "#1a1f5e",
+  "navigation_color_dark": false,
+  "maskable_icon": true,
+  "short_name": "WimpSchool"
+}

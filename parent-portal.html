@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Parent Portal | WimpSchool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="favicon.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#e63a2e" />
+</head>
+<body data-required-role="parent" data-page="parent-portal" class="hide-until-auth">
+  <header class="dashboard-header">
+    <div class="brand">WimpSchool</div>
+    <nav class="dashboard-nav">
+      <a href="parent-portal.html">Dashboard</a>
+      <a href="index.html" data-logout class="btn btn-secondary small">Logout</a>
+    </nav>
+  </header>
+  <main class="dashboard-main">
+    <section class="dashboard-hero">
+      <div>
+        <span class="eyebrow">Parent portal</span>
+        <h1>View your child’s school progress</h1>
+        <p>Monitor attendance, fee balance, exam results and receive private school updates.</p>
+      </div>
+      <div class="dashboard-actions">
+        <a href="#payments" class="btn btn-primary">Pay fees</a>
+        <a href="#notices" class="btn btn-secondary">View announcements</a>
+      </div>
+    </section>
+
+    <section class="portal-highlight">
+      <h3>Parent experience</h3>
+      <p>Your school’s branding, fee updates, and shared announcements all appear in one calm, consistent portal.</p>
+    </section>
+
+    <section class="stat-grid">
+      <article class="stat-card">
+        <h3>Child</h3>
+        <p id="childName">—</p>
+      </article>
+      <article class="stat-card">
+        <h3>Student ID</h3>
+        <p id="studentId">—</p>
+      </article>
+      <article class="stat-card">
+        <h3>Balance</h3>
+        <p id="balanceAmount">—</p>
+      </article>
+      <article class="stat-card">
+        <h3>Attendance</h3>
+        <p id="attendancePercent">—</p>
+      </article>
+    </section>
+
+    <section id="payments" class="payment-panel">
+      <div class="section-heading">
+        <h2>Fee payment</h2>
+        <p>Pay school fees instantly with Flutterwave integration.</p>
+      </div>
+      <div class="payment-card">
+        <label for="childSelector">Select child</label>
+        <select id="childSelector"></select>
+        <div id="childFeeBreakdown" class="notice-card"></div>
+        <p>Outstanding balance: <strong id="paymentBalance">₦0</strong></p>
+        <button id="payButton" class="btn btn-primary">Pay with Flutterwave</button>
+        <p id="paymentStatus" class="form-note"></p>
+      </div>
+    </section>
+
+    <section id="notices" class="announcements-panel">
+      <div class="section-heading">
+        <h2>Recent announcements</h2>
+      </div>
+      <div id="parentNotices">
+        <article class="notice-card">
+          <h3>Loading announcements…</h3>
+          <p>Please wait while we load your school updates.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config-checker.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/backend.js"></script>
+  <script src="js/payments.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Settings | WimpSchool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="favicon.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#e63a2e" />
+</head>
+<body data-required-role="school_admin" data-page="admin-settings" class="hide-until-auth">
+  <header class="dashboard-header">
+    <div class="brand">WimpSchool</div>
+    <nav class="dashboard-nav">
+      <a href="school-admin-dashboard.html">Dashboard</a>
+      <a href="student-management.html">Students</a>
+      <a href="index.html" data-logout class="btn btn-secondary small">Logout</a>
+    </nav>
+  </header>
+
+  <main class="dashboard-main">
+    <section class="dashboard-hero">
+      <div>
+        <span class="eyebrow">Admin settings</span>
+        <h1>Configure school details and system preferences</h1>
+        <p>Update school profile, fee structures, grading systems and academic session settings.</p>
+      </div>
+      <div class="dashboard-actions">
+        <a href="#settings" class="btn btn-primary">Update settings</a>
+      </div>
+    </section>
+
+    <section class="dashboard-panel">
+      <div class="highlight-card compact-highlight">
+        <p class="highlight-pill">School operations</p>
+        <h2>Keep your school profile, fees, and portal theme aligned</h2>
+        <p>Use these controls to shape the experience that teachers, parents, and admins see every day.</p>
+      </div>
+    </section>
+
+    <section class="settings-grid" id="settings">
+      <article class="list-card">
+        <h2>School profile</h2>
+        <p>Update school identity, contact details, and portal display name.</p>
+        <form id="profileSettingsForm">
+          <label>School name</label>
+          <input type="text" id="settingsSchoolName" placeholder="School name" />
+          <label>School code</label>
+          <input type="text" id="settingsSchoolCode" placeholder="School code" readonly />
+          <label>School address</label>
+          <input type="text" id="settingsSchoolAddress" placeholder="School address" />
+          <label>School email</label>
+          <input type="email" id="settingsSchoolEmail" placeholder="admin@school.com" />
+          <label>School phone</label>
+          <input type="tel" id="settingsSchoolPhone" placeholder="+234 800 000 0000" />
+          <button type="submit" class="btn btn-primary">Save profile</button>
+          <p id="profileStatus" class="form-note"></p>
+        </form>
+      </article>
+      <article class="list-card">
+        <h2>Fee & grading rules</h2>
+        <p>Set default tuition and grading scale for school operations.</p>
+        <form id="feeSettingsForm">
+          <label>Default tuition</label>
+          <input type="number" id="settingsDefaultTuition" step="100" placeholder="20000" />
+          <label>Class fee mapping (JSON)</label>
+          <textarea id="settingsClassFeeMap" rows="5" placeholder='{"Nursery 1": 15000, "JSS1": 25000, "SS1": 30000}'></textarea>
+          <label>Grading scale</label>
+          <select id="settingsGradingScale">
+            <option value="">Select scale</option>
+            <option value="A-F">A-F</option>
+            <option value="1-5">1-5</option>
+            <option value="Percentage">Percentage</option>
+          </select>
+          <button type="submit" class="btn btn-secondary small">Save fee settings</button>
+          <p id="feeStatus" class="form-note"></p>
+        </form>
+      </article>
+      <article class="list-card">
+        <h2>Subscription upgrade</h2>
+        <p>Choose a higher plan and schedule it to start on your next billing date.</p>
+        <form id="planUpgradeForm">
+          <label>Current plan</label>
+          <p><strong id="settingsCurrentPlan">—</strong></p>
+          <label>Pending upgrade</label>
+          <p><strong id="settingsPendingPlan">—</strong></p>
+          <label>Next billing date</label>
+          <p><strong id="settingsPlanEffectiveDate">—</strong></p>
+          <label>Upgrade to</label>
+          <select id="upgradePlan">
+            <option value="">Select a plan</option>
+            <option value="Starter">Starter</option>
+            <option value="Growth">Growth</option>
+            <option value="Elite">Elite</option>
+          </select>
+          <button type="submit" class="btn btn-primary">Schedule upgrade</button>
+        </form>
+        <p id="planUpgradeStatus" class="form-note"></p>
+      </article>
+      <article class="list-card">
+        <h2>Branding & portal theme</h2>
+        <p>Customize your school logo and brand palette for the parent portal.</p>
+        <form id="brandingForm">
+          <label>School logo URL</label>
+          <input type="url" id="brandingLogoUrl" placeholder="https://example.com/logo.png" />
+          <label>Primary portal color</label>
+          <input type="color" id="brandingPrimaryColor" value="#e63a2e" />
+          <button type="submit" id="saveBrandingButton" class="btn btn-secondary small">Save branding preview</button>
+        </form>
+        <p id="brandingStatus" class="form-note">Brand updates will be visible across dashboards and the parent portal once saved.</p>
+      </article>
+
+      <article class="list-card">
+        <h2>Notifications & alerts</h2>
+        <p>Send a test notification through the configured delivery channel for your school.</p>
+        <form id="notificationSettingsForm">
+          <label>Delivery channel</label>
+          <select id="notificationChannel">
+            <option value="email">Email</option>
+            <option value="sms">SMS</option>
+          </select>
+          <label>Recipient</label>
+          <input type="text" id="notificationRecipient" placeholder="name@example.com or +234..." />
+          <label>Subject</label>
+          <input type="text" id="notificationSubject" placeholder="School update" />
+          <label>Message</label>
+          <textarea id="notificationMessage" rows="3" placeholder="A test notification from WimpSchool"></textarea>
+          <button type="submit" class="btn btn-primary">Send test alert</button>
+          <p id="notificationStatus" class="form-note">Email/SMS delivery requires provider credentials in Supabase Edge Function env vars.</p>
+        </form>
+      </article>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config-checker.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/backend.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
